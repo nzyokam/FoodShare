@@ -13,7 +13,7 @@ import 'my_requests_screen.dart';
 import 'reserved_donations_screen.dart';
 import '../shelter/profile_screen.dart';
 import '../shelter/settings_screen.dart';
-
+import 'package:foodsharing/models/user_model.dart';
 class ShelterDashboard extends StatefulWidget {
   const ShelterDashboard({super.key});
 
@@ -25,7 +25,7 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
   final AuthService _authService = AuthService();
   int _selectedIndex = 0;
   Shelter? _shelter;
-  
+
   // Analytics data
   int _availableDonations = 0;
   int _myRequests = 0;
@@ -46,7 +46,7 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
           .collection('shelters')
           .doc(user.uid)
           .get();
-      
+
       if (doc.exists) {
         setState(() {
           _shelter = Shelter.fromJson(doc.data()!);
@@ -60,20 +60,20 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
   Future<void> _loadAnalytics() async {
     try {
       final user = _authService.currentUser!;
-      
+
       // Get available donations in the same city
       final availableSnapshot = await FirebaseFirestore.instance
           .collection('donations')
           .where('status', isEqualTo: 'available')
           .where('city', isEqualTo: _shelter?.city ?? '')
           .get();
-      
+
       // Get my requests
       final requestsSnapshot = await FirebaseFirestore.instance
           .collection('requests')
           .where('shelterId', isEqualTo: user.uid)
           .get();
-      
+
       // Get reserved donations
       final reservedSnapshot = await FirebaseFirestore.instance
           .collection('donations')
@@ -101,46 +101,57 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
     setState(() => _selectedIndex = index);
   }
 
-  Widget _getSelectedScreen() {
-    switch (_selectedIndex) {
-      case 0:
-        return _buildDashboardHome();
-      case 1:
-        return ProfileScreen(userType: UserType.shelter);
-      case 2:
-        return const SettingsScreen();
-      default:
-        return _buildDashboardHome();
-    }
+Widget _getSelectedScreen() {
+  switch (_selectedIndex) {
+    case 0:
+      return _buildDashboardHome();
+    case 1:
+      // Return ProfileScreen wrapped in a Widget that includes the drawer
+      return ProfileScreen(
+        userType: UserType.shelter, 
+        onDrawerItemSelected: _onDrawerItemSelected,
+      );
+    case 2:
+      // Return SettingsScreen wrapped in a Widget that includes the drawer
+      return SettingsScreen(
+        onDrawerItemSelected: _onDrawerItemSelected,
+      );
+    default:
+      return _buildDashboardHome();
   }
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: _selectedIndex == 0 ? AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'Dashboard',
-          style: GoogleFonts.poppins(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const BrowseDonationsScreen()),
-              ).then((_) => _loadAnalytics()); // Refresh analytics
-            },
-            icon: const Icon(Icons.search),
-            tooltip: 'Browse Donations',
-          ),
-        ],
-      ) : null,
+      appBar: _selectedIndex == 0
+          ? AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              title: Text(
+                'Dashboard',
+                style: GoogleFonts.poppins(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              actions: [
+                IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const BrowseDonationsScreen(),
+                      ),
+                    ).then((_) => _loadAnalytics()); 
+                  },
+                  icon: const Icon(Icons.search),
+                  tooltip: 'Browse Donations',
+                ),
+              ],
+            )
+          : null,
       drawer: MyDrawer(onItemSelected: _onDrawerItemSelected),
       body: _getSelectedScreen(),
     );
@@ -161,48 +172,60 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
             // Welcome Section
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
+                color: Colors.white.withOpacity(0.1), // glass feel
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.green.withOpacity(0.25),
+                    Colors.teal.withOpacity(0.2),
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome back!',
+                    'Welcome back,',
                     style: TextStyle(
-                      color: Colors.white.withAlpha(200),
+                      color: Colors.white.withAlpha(213),
                       fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 0.5,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
-                    _shelter?.organizationName ?? 'Organization',
+                    _shelter?.organizationName ?? 'Your Organisation',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Text(
                     'Helping feed ${_shelter?.capacity ?? 0} people in your community 🙏',
                     style: TextStyle(
-                      color: Colors.white.withAlpha(180),
+                      color: Colors.white.withAlpha(187),
                       fontSize: 14,
                     ),
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
             // Analytics Cards
             Text(
               'Your Activity',
@@ -212,9 +235,9 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             Row(
               children: [
                 Expanded(
@@ -236,9 +259,9 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             Row(
               children: [
                 Expanded(
@@ -260,9 +283,9 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Quick Actions
             Text(
               'Quick Actions',
@@ -272,9 +295,9 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             Row(
               children: [
                 Expanded(
@@ -285,7 +308,9 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
                     const Color(0xFF2E7D32),
                     () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const BrowseDonationsScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const BrowseDonationsScreen(),
+                      ),
                     ).then((_) => _loadAnalytics()),
                   ),
                 ),
@@ -298,15 +323,17 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
                     Colors.blue,
                     () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const MyRequestsScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const MyRequestsScreen(),
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             SizedBox(
               width: double.infinity,
               child: _buildActionCard(
@@ -316,111 +343,118 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
                 Colors.orange,
                 () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ReservedDonationsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ReservedDonationsScreen(),
+                  ),
                 ),
                 isWide: true,
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Recent Donations Preview
-            Text(
-              'Recent Donations Nearby',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('donations')
-                  .where('status', isEqualTo: 'available')
-                  .where('city', isEqualTo: _shelter?.city ?? '')
-                  .orderBy('createdAt', descending: true)
-                  .limit(3)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+            //           Text(
+            //             'Recent Donations Nearby',
+            //             style: TextStyle(
+            //               fontSize: 20,
+            //               fontWeight: FontWeight.bold,
+            //               color: Theme.of(context).colorScheme.onSurface,
+            //             ),
+            //           ),
 
-                final donations = snapshot.data!.docs
-                    .map((doc) => Donation.fromJson(doc.data() as Map<String, dynamic>, docId: doc.id))
-                    .toList();
+            //           const SizedBox(height: 16),
 
-                if (donations.isEmpty) {
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withAlpha(20),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.primary.withAlpha(50),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.restaurant_outlined,
-                          size: 48,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No donations available yet',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Check back later for new donations in ${_shelter?.city}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  );
-                }
+            //           StreamBuilder<QuerySnapshot>(
+            //             stream: FirebaseFirestore.instance
+            //                 .collection('donations')
+            //                 .where('status', isEqualTo: 'available')
+            //                 .where('city', isEqualTo: _shelter?.city ?? '')
+            //                 .orderBy('createdAt', descending: true)
+            //                 .limit(3)
+            //                 .snapshots(),
+            //             builder: (context, snapshot) {
+            //               if (!snapshot.hasData) {
+            //                 return const Center(child: CircularProgressIndicator());
+            //               }
 
-                return Column(
-                  children: donations.map((donation) => 
-                    _buildDonationPreviewCard(donation)
-                  ).toList(),
-                );
-              },
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // View All Button
-            Center(
-              child: TextButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const BrowseDonationsScreen()),
-                ),
-                child: const Text('View All Donations →'),
-              ),
-            ),
+            //               final donations = snapshot.data!.docs
+            //                   .map((doc) => Donation.fromJson(doc.data() as Map<String, dynamic>, docId: doc.id))
+            //                   .toList();
+
+            //               if (donations.isEmpty) {
+            //                 return Container(
+            //                   width: double.infinity,
+            //                   padding: const EdgeInsets.all(20),
+            //                   decoration: BoxDecoration(
+            //                     color: Theme.of(context).colorScheme.primary.withAlpha(20),
+            //                     borderRadius: BorderRadius.circular(12),
+            //                     border: Border.all(
+            //                       color: Theme.of(context).colorScheme.primary.withAlpha(50),
+            //                     ),
+            //                   ),
+            //                   child: Column(
+            //                     children: [
+            //                       Icon(
+            //                         Icons.restaurant_outlined,
+            //                         size: 48,
+            //                         color: Theme.of(context).colorScheme.primary,
+            //                       ),
+            //                       const SizedBox(height: 12),
+            //                       Text(
+            //                         'No donations available yet',
+            //                         style: TextStyle(
+            //                           fontSize: 16,
+            //                           fontWeight: FontWeight.w600,
+            //                           color: Theme.of(context).colorScheme.onSurface,
+            //                         ),
+            //                       ),
+            //                       const SizedBox(height: 4),
+            //                       Text(
+            //                         'Check back later for new donations in ${_shelter?.city}',
+            //                         style: TextStyle(
+            //                           fontSize: 14,
+            //                           color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+            //                         ),
+            //                         textAlign: TextAlign.center,
+            //                       ),
+            //                     ],
+            //                   ),
+            //                 );
+            //               }
+
+            //               return Column(
+            //                 children: donations.map((donation) =>
+            //                   _buildDonationPreviewCard(donation)
+            //                 ).toList(),
+            //               );
+            //             },
+            //           ),
+
+            //           const SizedBox(height: 16),
+
+            //           // View All Button
+            //           Center(
+            //             child: TextButton(
+            //               onPressed: () => Navigator.push(
+            //                 context,
+            //                 MaterialPageRoute(builder: (_) => const BrowseDonationsScreen()),
+            //               ),
+            //               child: const Text('View All Donations →'),
+            //             ),
+            //           ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAnalyticsCard(String title, String value, IconData icon, Color color) {
+  Widget _buildAnalyticsCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -497,7 +531,9 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
                           subtitle,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withAlpha(160),
                           ),
                         ),
                       ],
@@ -524,7 +560,9 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withAlpha(160),
                     ),
                   ),
                 ],
@@ -571,9 +609,9 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
                     child: const Icon(Icons.fastfood),
                   ),
           ),
-          
+
           const SizedBox(width: 16),
-          
+
           // Content
           Expanded(
             child: Column(
@@ -594,7 +632,9 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
                   '${donation.quantity} ${donation.unit}',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withAlpha(160),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -603,14 +643,18 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
                     Icon(
                       Icons.access_time,
                       size: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withAlpha(160),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       'Expires: ${donation.expiryDate.toDate().day}/${donation.expiryDate.toDate().month}',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withAlpha(160),
                       ),
                     ),
                   ],
@@ -618,7 +662,7 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
               ],
             ),
           ),
-          
+
           // Action
           Icon(
             Icons.arrow_forward_ios,

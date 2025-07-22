@@ -3,10 +3,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../themes/theme_provider.dart';
 import '../../services/auth_service.dart';
+import '../../components/drawer.dart';
 import 'package:provider/provider.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  final Function(int)? onDrawerItemSelected;
+  const SettingsScreen({super.key, required this.onDrawerItemSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -14,6 +16,10 @@ class SettingsScreen extends StatelessWidget {
     
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
+      drawer: MyDrawer(onItemSelected: (index) {
+        // Handle drawer navigation - go back to dashboard
+        Navigator.pop(context);
+      }),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:foodsharing/auth/auth_page.dart';
+import 'package:foodsharing/models/user_model.dart';
 //import '../services/auth_service.dart';
 import '../screens/restaurant/restaurant_dashboard.dart';
 import '../screens/shared/shelter_dashboard.dart';
@@ -35,7 +36,7 @@ class _AuthGateState extends State<AuthGate> {
 
         // Not authenticated
         if (!snapshot.hasData || snapshot.data == null) {
-          return const AuthPage(); // Your login/register screen
+          return const AuthPage(); 
         }
 
         // User is authenticated, check profile completion status
@@ -77,7 +78,7 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 
-  // THIS IS THE KEY FIX - Stream instead of Future
+  
   Stream<ProfileStatus> _getProfileStatusStream() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return Stream.value(ProfileStatus.incomplete);
@@ -126,7 +127,3 @@ enum ProfileStatus {
   incomplete,
 }
 
-enum UserType {
-  restaurant,
-  shelter,
-}

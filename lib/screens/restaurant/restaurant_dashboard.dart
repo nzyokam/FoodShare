@@ -6,11 +6,12 @@ import '../../services/auth_service.dart';
 import '../../models/donation_model.dart';
 import '../../models/restaurant_model.dart';
 import '../../components/drawer.dart';
+import '../shelter/profile_screen.dart';  // Updated import
+import '../shelter/settings_screen.dart'; // Updated import
 import 'add_donation_screen.dart';
 import 'my_donations_screen.dart';
 import 'donation_requests_screen.dart';
-import '../shelter/profile_screen.dart';
-import '../shelter/settings_screen.dart';
+import 'package:foodsharing/models/user_model.dart';
 
 class RestaurantDashboard extends StatefulWidget {
   const RestaurantDashboard({super.key});
@@ -108,9 +109,14 @@ class _RestaurantDashboardState extends State<RestaurantDashboard> {
       case 0:
         return _buildDashboardHome();
       case 1:
-        return ProfileScreen(userType: UserType.restaurant);
+        return ProfileScreen(
+          userType: UserType.restaurant,
+          onDrawerItemSelected: _onDrawerItemSelected,
+        );
       case 2:
-        return const SettingsScreen();
+        return SettingsScreen(
+          onDrawerItemSelected: _onDrawerItemSelected,
+        );
       default:
         return _buildDashboardHome();
     }

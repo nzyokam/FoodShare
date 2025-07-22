@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:foodsharing/components/my_drawer_tile.dart';
+import 'package:foodsharing/screens/shared/shelter_dashboard.dart';
+
 
 class MyDrawer extends StatelessWidget {
   final Function(int) onItemSelected;
@@ -27,11 +29,17 @@ class MyDrawer extends StatelessWidget {
             ),
           ),
           MyDrawerTile(
-            text: 'H O M E',
+            text: 'D A S H B O A R D',
             icon: Icons.home,
             onTap: () {
-              Navigator.pop(context);
-              onItemSelected(0);
+              Navigator.pop(context); // Close drawer
+              // Navigate to Shelter Dashboard, replacing current screen
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ShelterDashboard(),
+                ),
+              );
             },
           ),
           MyDrawerTile(
@@ -39,7 +47,7 @@ class MyDrawer extends StatelessWidget {
             icon: Icons.person,
             onTap: () {
               Navigator.pop(context);
-              onItemSelected(1); // You’ll handle this in your parent screen
+              onItemSelected(1); 
             },
           ),
           MyDrawerTile(

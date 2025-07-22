@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:foodsharing/models/user_model.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import 'profile_setup/restaurant_profile_setup.dart';
