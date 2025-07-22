@@ -438,7 +438,7 @@ class _DonationRequestsScreenState extends State<DonationRequestsScreen> with Ti
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ChatScreen(donation: donation),
+                    builder: (_) => ChatScreen(donation: donation, shelterId: request.shelterId,),
                   ),
                 );
               },

@@ -5,12 +5,16 @@ import 'package:flutter/material.dart';
 import '../../models/donation_model.dart';
 import '../../models/restaurant_model.dart';
 import '../../models/shelter_model.dart';
-//import '../../services/auth_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final Donation donation;
+  final String? shelterId; // Add this parameter to specify which shelter
 
-  const ChatScreen({super.key, required this.donation});
+  const ChatScreen({
+    super.key, 
+    required this.donation,
+    this.shelterId, // Optional - can be inferred from current user
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -19,11 +23,11 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  //final AuthService _authService = AuthService();
   
   late final String chatId;
   late final String currentUserId;
-  late final String otherUserId;
+  late final String restaurantId;
+  late final String shelterId;
   
   Restaurant? _restaurant;
   Shelter? _shelter;
@@ -33,10 +37,61 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     currentUserId = FirebaseAuth.instance.currentUser!.uid;
-    _isCurrentUserRestaurant = currentUserId == widget.donation.donorId;
-    otherUserId = _isCurrentUserRestaurant ? '' : widget.donation.donorId;
+    restaurantId = widget.donation.donorId;
     
-    chatId = _getChatId(widget.donation.donorId, currentUserId);
+    // Determine if current user is restaurant
+    _isCurrentUserRestaurant = currentUserId == restaurantId;
+    
+    // Set shelter ID
+    if (_isCurrentUserRestaurant) {
+      // Current user is restaurant, shelter ID should be provided or inferred
+      shelterId = widget.shelterId ?? '';
+      if (shelterId.isEmpty) {
+        // If no shelter ID provided, we need to find it from recent requests
+        _findShelterIdFromRecentRequest();
+        return;
+      }
+    } else {
+      // Current user is shelter
+      shelterId = currentUserId;
+    }
+    
+    chatId = _getChatId(restaurantId, shelterId);
+    _loadUserData();
+    _createChatDocument();
+  }
+
+  // Find shelter ID from recent requests if not provided
+  Future<void> _findShelterIdFromRecentRequest() async {
+    try {
+      final requestsQuery = await FirebaseFirestore.instance
+          .collection('requests')
+          .where('donationId', isEqualTo: widget.donation.id)
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+      
+      if (requestsQuery.docs.isNotEmpty) {
+        final requestData = requestsQuery.docs.first.data();
+        final foundShelterId = requestData['shelterId'] as String;
+        
+        setState(() {
+          // Update the shelter ID and initialize chat
+        });
+        
+        // Reinitialize with found shelter ID
+        _initializeWithShelter(foundShelterId);
+      }
+    } catch (e) {
+      print('Error finding shelter ID: $e');
+    }
+  }
+  
+  void _initializeWithShelter(String foundShelterId) {
+    setState(() {
+      shelterId = foundShelterId;
+      chatId = _getChatId(restaurantId, shelterId);
+    });
     _loadUserData();
     _createChatDocument();
   }
@@ -50,43 +105,30 @@ class _ChatScreenState extends State<ChatScreen> {
 
   String _getChatId(String restaurantId, String shelterId) {
     // Ensure consistent chat ID regardless of who initiates
-    return 'donation_${widget.donation.id}_${restaurantId}_$shelterId';
+    // Use sorted IDs to ensure consistency
+    final sortedIds = [restaurantId, shelterId]..sort();
+    return 'donation_${widget.donation.id}_${sortedIds[0]}_${sortedIds[1]}';
   }
 
   Future<void> _loadUserData() async {
     try {
-      if (_isCurrentUserRestaurant) {
-        // Current user is restaurant, load shelter data for header
-        // We need to find which shelter is chatting (from recent requests or context)
-        // For now, we'll load restaurant data for the header
-        final restaurantDoc = await FirebaseFirestore.instance
-            .collection('restaurants')
-            .doc(widget.donation.donorId)
-            .get();
-        
-        if (restaurantDoc.exists) {
-          setState(() {
-            _restaurant = Restaurant.fromJson(restaurantDoc.data()!);
-          });
-        }
-      } else {
-        // Current user is shelter, load restaurant data
-        final restaurantDoc = await FirebaseFirestore.instance
-            .collection('restaurants')
-            .doc(widget.donation.donorId)
-            .get();
-        
-        final shelterDoc = await FirebaseFirestore.instance
-            .collection('shelters')
-            .doc(currentUserId)
-            .get();
+      // Always load restaurant data
+      final restaurantDoc = await FirebaseFirestore.instance
+          .collection('restaurants')
+          .doc(restaurantId)
+          .get();
+      
+      // Always load shelter data  
+      final shelterDoc = await FirebaseFirestore.instance
+          .collection('shelters')
+          .doc(shelterId)
+          .get();
 
-        if (restaurantDoc.exists && shelterDoc.exists) {
-          setState(() {
-            _restaurant = Restaurant.fromJson(restaurantDoc.data()!);
-            _shelter = Shelter.fromJson(shelterDoc.data()!);
-          });
-        }
+      if (restaurantDoc.exists && shelterDoc.exists) {
+        setState(() {
+          _restaurant = Restaurant.fromJson(restaurantDoc.data()!);
+          _shelter = Shelter.fromJson(shelterDoc.data()!);
+        });
       }
     } catch (e) {
       print('Error loading user data: $e');
@@ -101,8 +143,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!chatDoc.exists) {
         await chatRef.set({
           'donationId': widget.donation.id,
-          'restaurantId': widget.donation.donorId,
-          'shelterId': _isCurrentUserRestaurant ? otherUserId : currentUserId,
+          'restaurantId': restaurantId,
+          'shelterId': shelterId,
           'lastMessage': '',
           'lastMessageAt': FieldValue.serverTimestamp(),
           'createdAt': FieldValue.serverTimestamp(),
@@ -166,6 +208,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Don't render if we don't have shelter ID yet (for restaurants)
+    if (_isCurrentUserRestaurant && shelterId.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Chat')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: _buildAppBar(),
