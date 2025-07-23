@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:foodsharing/models/user_model.dart';
+import 'package:foodshare/models/user_model.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import 'profile_setup/restaurant_profile_setup.dart';
@@ -64,11 +64,12 @@ class _UserTypeSelectionState extends State<UserTypeSelection> {
               const SizedBox(height: 40),
               
               // App logo and title
-              const Icon(
-                Icons.restaurant_menu,
-                size: 60,
-                color: Color(0xFF2E7D32),
-              ),
+              Image.asset(
+                    'lib/assets/2.png',
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.contain,
+                  ),
               const SizedBox(height: 10),
               
               Text(

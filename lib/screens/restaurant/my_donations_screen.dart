@@ -472,17 +472,17 @@ class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProvid
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.schedule,
                         size: 16,
-                        color: const Color.fromARGB(255, 183, 160, 160),
+                        color: Color.fromARGB(255, 183, 160, 160),
                       ),
                       const SizedBox(width: 6),
                       Text(
                         'Pickup: ${donation.pickupTime.toDate().day}/${donation.pickupTime.toDate().month} at ${donation.pickupTime.toDate().hour.toString().padLeft(2, '0')}:${donation.pickupTime.toDate().minute.toString().padLeft(2, '0')}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
-                          color: const Color.fromARGB(255, 199, 199, 199),
+                          color: Color.fromARGB(255, 199, 199, 199),
                         ),
                       ),
                     ],
@@ -498,9 +498,9 @@ class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProvid
                       const SizedBox(width: 6),
                       Text(
                         'Created: ${_formatDate(donation.createdAt.toDate())}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
-                          color: const Color.fromARGB(255, 199, 199, 199),
+                          color: Color.fromARGB(255, 199, 199, 199),
                         ),
                       ),
                     ],

@@ -77,10 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showError(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
       );
     }
   }
@@ -88,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: const Color.fromARGB(255, 108, 126, 110),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -97,13 +94,15 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.restaurant_menu,
-                    size: 80,
-                    color: Color(0xFF2E7D32),
+                  Image.asset(
+                    'lib/assets/2.png',
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.contain,
                   ),
-                  const SizedBox(height: 30),
-                  
+
+                  const SizedBox(height: 20),
+
                   Text(
                     'FoodShare',
                     style: GoogleFonts.bebasNeue(
@@ -112,73 +111,116 @@ class _LoginScreenState extends State<LoginScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  
+
                   Text(
                     'Welcome back, you\'ve been missed!',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withAlpha(180),
                       fontSize: 14,
                     ),
                   ),
-                  
-                  const SizedBox(height: 50),
-                  
+
+                  const SizedBox(height: 30),
+
                   // Google Sign-In Button
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isGoogleLoading || _isLoading ? null : _signInWithGoogle,
-                      icon: _isGoogleLoading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
+                    child: OutlinedButton(
+                      onPressed: _isGoogleLoading || _isLoading
+                          ? null
+                          : _signInWithGoogle,
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black87,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 12,
+                        ),
+                        side: const BorderSide(color: Color(0xFFE0E0E0)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (_isGoogleLoading)
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: Colors.black54,
                               ),
                             )
-                          : Image.asset(
-                              'assets/google_logo.png', // You'll need to add this asset
-                              height: 20,
-                              width: 20,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Icon(Icons.login, color: Colors.white);
-                              },
+                          else
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Image.asset(
+                                'lib/assets/google_logo.png',
+                                height: 20,
+                                width: 20,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(
+                                    Icons.login,
+                                    color: Colors.black87,
+                                  );
+                                },
+                              ),
                             ),
-                      label: Text(_isGoogleLoading ? 'Signing in...' : 'Continue with Google'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4285F4),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 2,
+                          Text(
+                            _isGoogleLoading
+                                ? 'Signing in...'
+                                : 'Sign in with Google',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Divider
                   Row(
                     children: [
-                      Expanded(child: Divider(color: Theme.of(context).colorScheme.onSurface.withAlpha(100))),
+                      Expanded(
+                        child: Divider(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withAlpha(100),
+                        ),
+                      ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           'OR',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withAlpha(150),
                           ),
                         ),
                       ),
-                      Expanded(child: Divider(color: Theme.of(context).colorScheme.onSurface.withAlpha(100))),
+                      Expanded(
+                        child: Divider(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withAlpha(100),
+                        ),
+                      ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Email TextField
                   TextField(
                     controller: _emailController,
@@ -197,9 +239,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Password TextField
                   TextField(
                     controller: _passwordController,
@@ -218,9 +260,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 10),
-                  
+
                   // Forgot Password
                   Align(
                     alignment: Alignment.centerRight,
@@ -236,21 +278,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text(
                         'Forgot Password?',
                         style: TextStyle(
-                          color: Color.fromARGB(231, 32, 109, 77),
+                          color: Color.fromARGB(231, 24, 60, 45),
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 25),
-                  
+
                   // Login Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _isLoading || _isGoogleLoading ? null : _signInWithEmail,
+                      onPressed: _isLoading || _isGoogleLoading
+                          ? null
+                          : _signInWithEmail,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2E7D32),
                         foregroundColor: Colors.white,
@@ -264,13 +308,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
                               'Login',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 25),
-                  
+
                   // Register Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -278,7 +325,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         'Don\'t have an account?',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withAlpha(180),
                           fontSize: 14,
                         ),
                       ),
@@ -287,7 +336,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: const Text(
                           ' Register now!',
                           style: TextStyle(
-                            color: Color.fromARGB(231, 32, 109, 77),
+                            color: Color.fromARGB(231, 24, 60, 45),
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
@@ -295,7 +344,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 20),
                 ],
               ),

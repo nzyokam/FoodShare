@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:foodsharing/auth/login_screen.dart';
-import 'package:foodsharing/auth/register_screen.dart';
+import 'package:foodshare/auth/login_screen.dart';
+import 'package:foodshare/auth/register_screen.dart';
 
 
 class AuthPage extends StatefulWidget {

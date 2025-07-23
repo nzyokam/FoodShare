@@ -8,7 +8,7 @@ A Flutter-powered mobile application designed to combat hunger and food waste in
 
 - **Status**: Active Development (Core Features Implemented)
 - **Type**: Individual Project 
-- **Platform**: Flutter (Cross-platform mobile app)
+- **Platform**: Flutter (built using iOS simulator primarily for iOS, may have issues on Android devices)
 - **Target Region**: Kenya (Nairobi, Mombasa, Nakuru, Eldoret, Kisumu)
 - **Purpose**: Social Impact Application
 

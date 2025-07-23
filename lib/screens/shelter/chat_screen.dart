@@ -11,7 +11,7 @@ class ChatScreen extends StatefulWidget {
   final String? shelterId; // Add this parameter to specify which shelter
 
   const ChatScreen({
-    super.key, 
+    super.key,
     required this.donation,
     this.shelterId, // Optional - can be inferred from current user
   });
@@ -23,25 +23,46 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   late final String chatId;
   late final String currentUserId;
   late final String restaurantId;
   late final String shelterId;
-  
+
   Restaurant? _restaurant;
   Shelter? _shelter;
   bool _isCurrentUserRestaurant = false;
+  Future<void> _markMessagesAsRead() async {
+    try {
+      final unreadMessages = await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .where('senderId', isNotEqualTo: currentUserId)
+          .where('read', isEqualTo: false)
+          .get();
+
+      final batch = FirebaseFirestore.instance.batch();
+
+      for (var doc in unreadMessages.docs) {
+        batch.update(doc.reference, {'read': true});
+      }
+
+      await batch.commit();
+    } catch (e) {
+      print('Error marking messages as read: $e');
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     currentUserId = FirebaseAuth.instance.currentUser!.uid;
     restaurantId = widget.donation.donorId;
-    
+
     // Determine if current user is restaurant
     _isCurrentUserRestaurant = currentUserId == restaurantId;
-    
+
     // Set shelter ID
     if (_isCurrentUserRestaurant) {
       // Current user is restaurant, shelter ID should be provided or inferred
@@ -55,10 +76,13 @@ class _ChatScreenState extends State<ChatScreen> {
       // Current user is shelter
       shelterId = currentUserId;
     }
-    
+
     chatId = _getChatId(restaurantId, shelterId);
     _loadUserData();
     _createChatDocument();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _markMessagesAsRead();
+    });
   }
 
   // Find shelter ID from recent requests if not provided
@@ -70,15 +94,15 @@ class _ChatScreenState extends State<ChatScreen> {
           .orderBy('createdAt', descending: true)
           .limit(1)
           .get();
-      
+
       if (requestsQuery.docs.isNotEmpty) {
         final requestData = requestsQuery.docs.first.data();
         final foundShelterId = requestData['shelterId'] as String;
-        
+
         setState(() {
           // Update the shelter ID and initialize chat
         });
-        
+
         // Reinitialize with found shelter ID
         _initializeWithShelter(foundShelterId);
       }
@@ -86,7 +110,7 @@ class _ChatScreenState extends State<ChatScreen> {
       print('Error finding shelter ID: $e');
     }
   }
-  
+
   void _initializeWithShelter(String foundShelterId) {
     setState(() {
       shelterId = foundShelterId;
@@ -117,8 +141,8 @@ class _ChatScreenState extends State<ChatScreen> {
           .collection('restaurants')
           .doc(restaurantId)
           .get();
-      
-      // Always load shelter data  
+
+      // Always load shelter data
       final shelterDoc = await FirebaseFirestore.instance
           .collection('shelters')
           .doc(shelterId)
@@ -137,7 +161,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _createChatDocument() async {
     try {
-      final chatRef = FirebaseFirestore.instance.collection('chats').doc(chatId);
+      final chatRef = FirebaseFirestore.instance
+          .collection('chats')
+          .doc(chatId);
       final chatDoc = await chatRef.get();
 
       if (!chatDoc.exists) {
@@ -166,17 +192,15 @@ class _ChatScreenState extends State<ChatScreen> {
           .doc(chatId)
           .collection('messages')
           .add({
-        'senderId': currentUserId,
-        'text': message,
-        'timestamp': FieldValue.serverTimestamp(),
-        'type': 'text',
-      });
+            'senderId': currentUserId,
+            'text': message,
+            'timestamp': FieldValue.serverTimestamp(),
+            'type': 'text',
+            'read': false, // Add read status
+          });
 
       // Update chat document with last message
-      await FirebaseFirestore.instance
-          .collection('chats')
-          .doc(chatId)
-          .update({
+      await FirebaseFirestore.instance.collection('chats').doc(chatId).update({
         'lastMessage': message,
         'lastMessageAt': FieldValue.serverTimestamp(),
       });
@@ -223,7 +247,7 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           // Donation Info Header
           _buildDonationHeader(),
-          
+
           // Messages List
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
@@ -248,7 +272,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         Icon(
                           Icons.chat_bubble_outline,
                           size: 64,
-                          color: Theme.of(context).colorScheme.primary.withAlpha(100),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withAlpha(100),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -263,7 +289,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         Text(
                           'Send a message to discuss this donation',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withAlpha(160),
                           ),
                         ),
                       ],
@@ -271,7 +299,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   );
                 }
 
-                WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+                WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => _scrollToBottom(),
+                );
 
                 return ListView.builder(
                   controller: _scrollController,
@@ -279,15 +309,16 @@ class _ChatScreenState extends State<ChatScreen> {
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final messageDoc = messages[index];
-                    final messageData = messageDoc.data() as Map<String, dynamic>;
-                    
+                    final messageData =
+                        messageDoc.data() as Map<String, dynamic>;
+
                     return _buildMessageBubble(messageData);
                   },
                 );
               },
             ),
           ),
-          
+
           // Message Input
           _buildMessageInput(),
         ],
@@ -345,9 +376,7 @@ class _ChatScreenState extends State<ChatScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF2E7D32).withAlpha(20),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF2E7D32).withAlpha(50),
-        ),
+        border: Border.all(color: const Color(0xFF2E7D32).withAlpha(50)),
       ),
       child: Row(
         children: [
@@ -392,7 +421,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 Text(
                   '${widget.donation.quantity} ${widget.donation.unit}',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withAlpha(160),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -401,14 +432,18 @@ class _ChatScreenState extends State<ChatScreen> {
                     Icon(
                       Icons.access_time,
                       size: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withAlpha(160),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       'Expires: ${widget.donation.expiryDate.toDate().day}/${widget.donation.expiryDate.toDate().month}',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withAlpha(160),
                       ),
                     ),
                   ],
@@ -439,11 +474,13 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildMessageBubble(Map<String, dynamic> messageData) {
     final isMe = messageData['senderId'] == currentUserId;
     final timestamp = messageData['timestamp'] as Timestamp?;
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         children: [
           if (!isMe) ...[
             CircleAvatar(
@@ -457,17 +494,21 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(width: 8),
           ],
-          
+
           Flexible(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isMe 
+                color: isMe
                     ? const Color(0xFF2E7D32)
                     : Theme.of(context).colorScheme.primary.withAlpha(20),
                 borderRadius: BorderRadius.circular(18).copyWith(
-                  bottomLeft: isMe ? const Radius.circular(18) : const Radius.circular(4),
-                  bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(18),
+                  bottomLeft: isMe
+                      ? const Radius.circular(18)
+                      : const Radius.circular(4),
+                  bottomRight: isMe
+                      ? const Radius.circular(4)
+                      : const Radius.circular(18),
                 ),
               ),
               child: Column(
@@ -476,7 +517,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   Text(
                     messageData['text'] ?? '',
                     style: TextStyle(
-                      color: isMe ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                      color: isMe
+                          ? Colors.white
+                          : Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
                     ),
                   ),
@@ -485,9 +528,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     Text(
                       _formatMessageTime(timestamp.toDate()),
                       style: TextStyle(
-                        color: isMe 
+                        color: isMe
                             ? Colors.white.withAlpha(180)
-                            : Theme.of(context).colorScheme.onSurface.withAlpha(120),
+                            : Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withAlpha(120),
                         fontSize: 12,
                       ),
                     ),
@@ -496,7 +541,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           ),
-          
+
           if (isMe) ...[
             const SizedBox(width: 8),
             CircleAvatar(

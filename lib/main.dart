@@ -1,8 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:foodsharing/auth/auth_gate.dart';
+import 'package:foodshare/auth/auth_gate.dart';
 
-import 'package:foodsharing/themes/theme_provider.dart';
+import 'package:foodshare/themes/theme_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';

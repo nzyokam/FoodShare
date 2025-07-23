@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 //import 'package:foodsharing/auth/auth_gate.dart';
-import 'package:foodsharing/models/restaurant_model.dart';
-import 'package:foodsharing/models/shelter_model.dart';
-import 'package:foodsharing/services/auth_service.dart';
-import 'package:foodsharing/models/user_model.dart';
+import 'package:foodshare/models/restaurant_model.dart';
+import 'package:foodshare/models/shelter_model.dart';
+import 'package:foodshare/services/auth_service.dart';
+import 'package:foodshare/models/user_model.dart';
 class EditProfileScreen extends StatefulWidget {
   final UserType userType;
   final Restaurant? restaurant;

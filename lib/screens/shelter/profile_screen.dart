@@ -1,11 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:foodsharing/screens/shared/edit_profile_screen.dart';
+import 'package:foodshare/screens/shared/edit_profile_screen.dart';
 import '../../services/auth_service.dart';
 import '../../models/restaurant_model.dart';
 import '../../models/shelter_model.dart';
 import '../../components/drawer.dart';
-import 'package:foodsharing/models/user_model.dart';
+import 'package:foodshare/models/user_model.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserType userType;

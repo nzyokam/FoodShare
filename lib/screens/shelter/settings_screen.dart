@@ -13,13 +13,15 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
-    
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      drawer: MyDrawer(onItemSelected: (index) {
-        // Handle drawer navigation - go back to dashboard
-        Navigator.pop(context);
-      }),
+      backgroundColor: Theme.of(context).colorScheme.primary,
+      drawer: MyDrawer(
+        onItemSelected: (index) {
+          // Handle drawer navigation - go back to dashboard
+          Navigator.pop(context);
+        },
+      ),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -30,7 +32,7 @@ class SettingsScreen extends StatelessWidget {
         children: [
           // App Settings Section
           _buildSectionHeader('App Settings'),
-          
+
           _buildSettingsCard([
             _buildSettingsTile(
               'Dark Mode',
@@ -43,18 +45,20 @@ class SettingsScreen extends StatelessWidget {
                 },
               ),
             ),
-            
+
             _buildSettingsTile(
               'Notifications',
               'Manage notification preferences',
               Icons.notifications,
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Notifications settings coming soon!')),
+                  const SnackBar(
+                    content: Text('Notifications settings coming soon!'),
+                  ),
                 );
               },
             ),
-            
+
             _buildSettingsTile(
               'Language',
               'Change app language',
@@ -62,29 +66,30 @@ class SettingsScreen extends StatelessWidget {
               trailing: const Text('English'),
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Language settings coming soon!')),
+                  const SnackBar(
+                    content: Text('Language settings coming soon!'),
+                  ),
                 );
               },
             ),
           ]),
-          
+
           const SizedBox(height: 24),
-          
+
           // Account Section
           _buildSectionHeader('Account'),
-          
+
           _buildSettingsCard([
-            _buildSettingsTile(
-              'Edit Profile',
-              'Update your profile information',
-              Icons.person,
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Edit profile coming soon!')),
-                );
-              },
-            ),
-            
+            // _buildSettingsTile(
+            //   'Edit Profile',
+            //   'Update your profile information',
+            //   Icons.person,
+            //   onTap: () {
+            //     ScaffoldMessenger.of(context).showSnackBar(
+            //       const SnackBar(content: Text('Edit profile coming soon!')),
+            //     );
+            //   },
+            // ),
             _buildSettingsTile(
               'Privacy Policy',
               'Read our privacy policy',
@@ -93,7 +98,7 @@ class SettingsScreen extends StatelessWidget {
                 _showComingSoon(context, 'Privacy Policy');
               },
             ),
-            
+
             _buildSettingsTile(
               'Terms of Service',
               'Read our terms of service',
@@ -103,12 +108,12 @@ class SettingsScreen extends StatelessWidget {
               },
             ),
           ]),
-          
+
           const SizedBox(height: 24),
-          
+
           // Support Section
           _buildSectionHeader('Support'),
-          
+
           _buildSettingsCard([
             _buildSettingsTile(
               'Help & FAQ',
@@ -118,7 +123,7 @@ class SettingsScreen extends StatelessWidget {
                 _showComingSoon(context, 'Help & FAQ');
               },
             ),
-            
+
             _buildSettingsTile(
               'Contact Support',
               'Get in touch with our support team',
@@ -127,7 +132,7 @@ class SettingsScreen extends StatelessWidget {
                 _showComingSoon(context, 'Contact Support');
               },
             ),
-            
+
             _buildSettingsTile(
               'Rate App',
               'Rate FoodShare on the app store',
@@ -137,12 +142,12 @@ class SettingsScreen extends StatelessWidget {
               },
             ),
           ]),
-          
+
           const SizedBox(height: 24),
-          
+
           // About Section
           _buildSectionHeader('About'),
-          
+
           _buildSettingsCard([
             _buildSettingsTile(
               'About FoodShare',
@@ -152,7 +157,7 @@ class SettingsScreen extends StatelessWidget {
                 _showAboutDialog(context);
               },
             ),
-            
+
             _buildSettingsTile(
               'Version',
               'App version and build info',
@@ -160,12 +165,12 @@ class SettingsScreen extends StatelessWidget {
               trailing: const Text('1.0.0'),
             ),
           ]),
-          
+
           const SizedBox(height: 32),
-          
+
           // Danger Zone
           _buildSectionHeader('Danger Zone', color: Colors.red),
-          
+
           _buildSettingsCard([
             _buildSettingsTile(
               'Sign Out',
@@ -176,7 +181,7 @@ class SettingsScreen extends StatelessWidget {
                 _showSignOutDialog(context, authService);
               },
             ),
-            
+
             _buildSettingsTile(
               'Delete Account',
               'Permanently delete your account',
@@ -187,7 +192,7 @@ class SettingsScreen extends StatelessWidget {
               },
             ),
           ]),
-          
+
           const SizedBox(height: 32),
         ],
       ),
@@ -213,9 +218,7 @@ class SettingsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withAlpha(10),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey.withAlpha(50),
-        ),
+        border: Border.all(color: Colors.grey.withAlpha(50)),
       ),
       child: Column(children: children),
     );
@@ -233,21 +236,22 @@ class SettingsScreen extends StatelessWidget {
       leading: Icon(icon, color: color),
       title: Text(
         title,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
+        style: TextStyle(fontWeight: FontWeight.w600, color: color),
       ),
       subtitle: Text(subtitle),
-      trailing: trailing ?? (onTap != null ? const Icon(Icons.arrow_forward_ios, size: 16) : null),
+      trailing:
+          trailing ??
+          (onTap != null
+              ? const Icon(Icons.arrow_forward_ios, size: 16)
+              : null),
       onTap: onTap,
     );
   }
 
   void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature coming soon!')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$feature coming soon!')));
   }
 
   void _showAboutDialog(BuildContext context) {
@@ -255,27 +259,27 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('About FoodShare'),
+        icon: Image.asset(
+          'lib/assets/2.png',
+          width: 60,
+          height: 60,
+          fit: BoxFit.contain,
+        ),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'FoodShare is dedicated to fighting hunger and reducing food waste by connecting restaurants with local shelters and communities in need.',
+              'FoodShare is an initiative developed by Muusi Nguutu Nzyoka. It is dedicated to fighting hunger and reducing food waste by connecting restaurants with local shelters and communities in need.',
               style: TextStyle(height: 1.5),
             ),
             SizedBox(height: 16),
             Text(
               'Together, we\'re working towards UN Sustainable Development Goal 2: Zero Hunger.',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                height: 1.5,
-              ),
+              style: TextStyle(fontWeight: FontWeight.w600, height: 1.5),
             ),
             SizedBox(height: 16),
-            Text(
-              'Version 1.0.0',
-              style: TextStyle(fontSize: 12),
-            ),
+            Text('Version 1.0.0', style: TextStyle(fontSize: 12)),
           ],
         ),
         actions: [
