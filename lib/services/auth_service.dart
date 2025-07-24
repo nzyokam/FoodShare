@@ -1,14 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:foodshare/models/user_model.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-
-
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // Get current user
   User? get currentUser => _auth.currentUser;
@@ -19,13 +15,13 @@ class AuthService {
   // Check if user has completed profile
   Future<bool> isProfileComplete() async {
     if (currentUser == null) return false;
-    
+
     try {
       final doc = await _firestore
           .collection('users')
           .doc(currentUser!.uid)
           .get();
-      
+
       return doc.exists && (doc.data()?['profileComplete'] ?? false);
     } catch (e) {
       print('Error checking profile: $e');
@@ -36,19 +32,19 @@ class AuthService {
   // Get user type
   Future<UserType?> getUserType() async {
     if (currentUser == null) return null;
-    
+
     try {
       final doc = await _firestore
           .collection('users')
           .doc(currentUser!.uid)
           .get();
-      
+
       if (!doc.exists) return null;
-      
+
       final userTypeString = doc.data()?['userType'];
       if (userTypeString == 'restaurant') return UserType.restaurant;
       if (userTypeString == 'shelter') return UserType.shelter;
-      
+
       return null;
     } catch (e) {
       print('Error getting user type: $e');
@@ -56,40 +52,11 @@ class AuthService {
     }
   }
 
-  // Sign in with Google
-  Future<UserCredential?> signInWithGoogle() async {
-    try {
-      // Sign out first to force account selection
-      await _googleSignIn.signOut();
-      
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null; // User cancelled
-
-      final GoogleSignInAuthentication googleAuth = 
-          await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential = await _auth.signInWithCredential(credential);
-      
-      // Create user document if it doesn't exist
-      if (userCredential.user != null) {
-        await _createOrUpdateUserDocument(userCredential.user!);
-      }
-
-      return userCredential;
-    } catch (e) {
-      print('Google Sign-In Error: $e');
-      return null;
-    }
-  }
-
   // Sign in with email and password
   Future<UserCredential?> signInWithEmailPassword(
-      String email, String password) async {
+    String email,
+    String password,
+  ) async {
     try {
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
@@ -104,7 +71,10 @@ class AuthService {
 
   // Register with email and password
   Future<UserCredential?> registerWithEmailPassword(
-      String email, String password, String displayName) async {
+    String email,
+    String password,
+    String displayName,
+  ) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -125,7 +95,9 @@ class AuthService {
 
   // Set user type after registration/sign-in
   Future<void> setUserType(UserType userType) async {
-    if (currentUser == null) return;
+    if (currentUser == null) {
+      throw Exception('No user signed in');
+    }
 
     try {
       await _firestore.collection('users').doc(currentUser!.uid).update({
@@ -140,7 +112,9 @@ class AuthService {
 
   // Mark profile as complete
   Future<void> markProfileComplete() async {
-    if (currentUser == null) return;
+    if (currentUser == null) {
+      throw Exception('No user signed in');
+    }
 
     try {
       await _firestore.collection('users').doc(currentUser!.uid).update({
@@ -153,13 +127,19 @@ class AuthService {
     }
   }
 
-  // Sign out
+  // Sign out - Fixed for web compatibility
   Future<void> signOut() async {
     try {
-      await _googleSignIn.signOut();
-      await _auth.signOut();
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _auth.signOut();
+        print('User signed out successfully');
+      } else {
+        print('No user was signed in');
+      }
     } catch (e) {
       print('Sign-Out Error: $e');
+      throw Exception('Failed to sign out: $e');
     }
   }
 
@@ -188,31 +168,103 @@ class AuthService {
       }
     } catch (e) {
       print('Error creating/updating user document: $e');
+      rethrow;
     }
   }
 
-  // Delete account
+  // Delete account - Fixed for web compatibility
   Future<void> deleteAccount() async {
-    if (currentUser == null) return;
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('No user signed in');
+    }
 
     try {
-      final uid = currentUser!.uid;
-      
-      // Delete user data from Firestore
-      await _firestore.collection('users').doc(uid).delete();
-      
-      // Delete profile based on user type
+      final uid = user.uid;
+
+      // Get user type before deletion
       final userType = await getUserType();
+
+      // Create a batch for atomic operations
+      final batch = _firestore.batch();
+
+      // Delete user data from Firestore
+      batch.delete(_firestore.collection('users').doc(uid));
+
+      // Delete profile based on user type
       if (userType == UserType.restaurant) {
-        await _firestore.collection('restaurants').doc(uid).delete();
+        final restaurantDoc = _firestore.collection('restaurants').doc(uid);
+        final restaurantExists = await restaurantDoc.get();
+        if (restaurantExists.exists) {
+          batch.delete(restaurantDoc);
+        }
       } else if (userType == UserType.shelter) {
-        await _firestore.collection('shelters').doc(uid).delete();
+        final shelterDoc = _firestore.collection('shelters').doc(uid);
+        final shelterExists = await shelterDoc.get();
+        if (shelterExists.exists) {
+          batch.delete(shelterDoc);
+        }
       }
-      
-      // Delete Firebase Auth account
-      await currentUser!.delete();
+
+      // Delete any donations or other related data
+      final donationsQuery = await _firestore
+          .collection('donations')
+          .where('userId', isEqualTo: uid)
+          .get();
+
+      for (final doc in donationsQuery.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Commit the batch delete
+      await batch.commit();
+
+      // Finally, delete Firebase Auth account
+      await user.delete();
+
+      print('Account deleted successfully');
     } catch (e) {
       print('Error deleting account: $e');
+      throw Exception('Failed to delete account: $e');
+    }
+  }
+
+  // Reset password
+  Future<void> resetPassword(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      print('Password reset error: $e');
+      rethrow;
+    }
+  }
+
+  // Update user profile
+  Future<void> updateUserProfile({
+    String? displayName,
+    String? photoURL,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('No user signed in');
+    }
+
+    try {
+      if (displayName != null) {
+        await user.updateDisplayName(displayName);
+      }
+      if (photoURL != null) {
+        await user.updatePhotoURL(photoURL);
+      }
+
+      // Update Firestore document
+      await _firestore.collection('users').doc(user.uid).update({
+        if (displayName != null) 'displayName': displayName,
+        if (photoURL != null) 'photoURL': photoURL,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error updating profile: $e');
       rethrow;
     }
   }

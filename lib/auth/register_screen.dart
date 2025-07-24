@@ -18,7 +18,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
-  bool _isGoogleLoading = false;
 
   @override
   void dispose() {
@@ -56,23 +55,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  Future<void> _signUpWithGoogle() async {
-    setState(() => _isGoogleLoading = true);
-
-    try {
-      final userCredential = await _authService.signInWithGoogle();
-      if (userCredential == null) {
-        // User cancelled
-        return;
-      }
-      // Navigation handled by AuthGate
-    } catch (e) {
-      _showError('Google Sign-Up failed: ${e.toString()}');
-    } finally {
-      if (mounted) setState(() => _isGoogleLoading = false);
-    }
-  }
-
   void _showError(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -84,7 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 108, 126, 110),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -121,102 +103,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
 
                   const SizedBox(height: 30),
-
-                  // Google Sign-Up Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: _isGoogleLoading || _isLoading
-                          ? null
-                          : _signUpWithGoogle,
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black87,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 14,
-                          horizontal: 12,
-                        ),
-                        side: const BorderSide(color: Color(0xFFE0E0E0)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (_isGoogleLoading)
-                            const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.black54,
-                              ),
-                            )
-                          else
-                            Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Image.asset(
-                                'lib/assets/google_logo.png',
-                                height: 20,
-                                width: 20,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(
-                                    Icons.login,
-                                    color: Colors.black87,
-                                  );
-                                },
-                              ),
-                            ),
-                          Text(
-                            _isGoogleLoading
-                                ? 'Creating account...'
-                                : 'Sign up with Google',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Divider
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Divider(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withAlpha(100),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'OR',
-                          style: TextStyle(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withAlpha(150),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Divider(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withAlpha(100),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
 
                   // Name TextField
                   TextField(
@@ -305,9 +191,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _isLoading || _isGoogleLoading
-                          ? null
-                          : _signUpWithEmail,
+                      onPressed: _isLoading ? null : _signUpWithEmail,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2E7D32),
                         foregroundColor: Colors.white,

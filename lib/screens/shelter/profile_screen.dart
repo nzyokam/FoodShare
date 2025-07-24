@@ -4,13 +4,17 @@ import 'package:foodshare/screens/shared/edit_profile_screen.dart';
 import '../../services/auth_service.dart';
 import '../../models/restaurant_model.dart';
 import '../../models/shelter_model.dart';
-import '../../components/drawer.dart';
+
 import 'package:foodshare/models/user_model.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserType userType;
-final Function(int)? onDrawerItemSelected;
-  const ProfileScreen({super.key, required this.userType, required this.onDrawerItemSelected});
+  final Function(int)? onDrawerItemSelected;
+  const ProfileScreen({
+    super.key,
+    required this.userType,
+    required this.onDrawerItemSelected,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -88,13 +92,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      drawer: MyDrawer(onItemSelected: (index) {
-        // Handle drawer navigation - go back to dashboard
-        Navigator.pop(context);
-      }),
+
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 15.0),
+          child: Image.asset(
+            'lib/assets/4.png',
+            width: 150,
+            height: 150,
+            fit: BoxFit.contain,
+          ),
+        ),
         title: const Text('Profile'),
         actions: [
           IconButton(

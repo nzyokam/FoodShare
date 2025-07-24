@@ -6,14 +6,13 @@ import '../../models/donation_model.dart';
 import '../../models/restaurant_model.dart';
 import '../../models/shelter_model.dart';
 import '../../models/user_model.dart';
-import '../../components/drawer.dart';
 
 class ChatsListScreen extends StatefulWidget {
   final UserType userType;
   final Function(int)? onDrawerItemSelected;
-  
+
   const ChatsListScreen({
-    super.key, 
+    super.key,
     required this.userType,
     this.onDrawerItemSelected,
   });
@@ -35,33 +34,37 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     try {
       final chatsQuery = await FirebaseFirestore.instance
           .collection('chats')
-          .where(widget.userType == UserType.restaurant ? 'restaurantId' : 'shelterId', 
-                 isEqualTo: currentUserId)
+          .where(
+            widget.userType == UserType.restaurant
+                ? 'restaurantId'
+                : 'shelterId',
+            isEqualTo: currentUserId,
+          )
           .get();
 
       List<String> brokenChatIds = [];
 
       for (var chatDoc in chatsQuery.docs) {
         final chatData = chatDoc.data();
-        
+
         final donationId = chatData['donationId'] as String?;
         final restaurantId = chatData['restaurantId'] as String?;
         final shelterId = chatData['shelterId'] as String?;
-        
+
         bool isBroken = false;
-        
+
         if (donationId == null || donationId.isEmpty) {
           isBroken = true;
         }
-        
+
         if (restaurantId == null || restaurantId.isEmpty) {
           isBroken = true;
         }
-        
+
         if (shelterId == null || shelterId.isEmpty) {
           isBroken = true;
         }
-        
+
         if (isBroken) {
           brokenChatIds.add(chatDoc.id);
           continue;
@@ -73,7 +76,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               .collection('donations')
               .doc(donationId!)
               .get();
-          
+
           if (!donationDoc.exists) {
             brokenChatIds.add(chatDoc.id);
           }
@@ -85,14 +88,18 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       if (brokenChatIds.isNotEmpty) {
         final batch = FirebaseFirestore.instance.batch();
         for (String chatId in brokenChatIds) {
-          batch.delete(FirebaseFirestore.instance.collection('chats').doc(chatId));
+          batch.delete(
+            FirebaseFirestore.instance.collection('chats').doc(chatId),
+          );
         }
         await batch.commit();
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Cleaned up ${brokenChatIds.length} broken conversations'),
+              content: Text(
+                'Cleaned up ${brokenChatIds.length} broken conversations',
+              ),
               backgroundColor: Colors.orange,
             ),
           );
@@ -106,83 +113,92 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   Stream<List<ChatItem>> _getChatsStream() {
     return FirebaseFirestore.instance
         .collection('chats')
-        .where(widget.userType == UserType.restaurant ? 'restaurantId' : 'shelterId', 
-               isEqualTo: currentUserId)
+        .where(
+          widget.userType == UserType.restaurant ? 'restaurantId' : 'shelterId',
+          isEqualTo: currentUserId,
+        )
         .orderBy('lastMessageAt', descending: true)
         .snapshots()
         .asyncMap((snapshot) async {
-      List<ChatItem> chatItems = [];
-      
-      for (var chatDoc in snapshot.docs) {
-        final chatData = chatDoc.data();
-        
-        try {
-          // Validate all required fields exist and are not empty
-          final donationId = chatData['donationId'] as String?;
-          final restaurantId = chatData['restaurantId'] as String?;
-          final shelterId = chatData['shelterId'] as String?;
-          
-          if (donationId == null || donationId.isEmpty ||
-              restaurantId == null || restaurantId.isEmpty ||
-              shelterId == null || shelterId.isEmpty) {
-            continue;
+          List<ChatItem> chatItems = [];
+
+          for (var chatDoc in snapshot.docs) {
+            final chatData = chatDoc.data();
+
+            try {
+              // Validate all required fields exist and are not empty
+              final donationId = chatData['donationId'] as String?;
+              final restaurantId = chatData['restaurantId'] as String?;
+              final shelterId = chatData['shelterId'] as String?;
+
+              if (donationId == null ||
+                  donationId.isEmpty ||
+                  restaurantId == null ||
+                  restaurantId.isEmpty ||
+                  shelterId == null ||
+                  shelterId.isEmpty) {
+                continue;
+              }
+
+              // Get donation details
+              final donationDoc = await FirebaseFirestore.instance
+                  .collection('donations')
+                  .doc(donationId)
+                  .get();
+
+              if (!donationDoc.exists) continue;
+
+              final donation = Donation.fromJson(
+                donationDoc.data()!,
+                docId: donationDoc.id,
+              );
+
+              // Get other party details
+              String otherPartyId;
+              String otherPartyCollection;
+
+              if (widget.userType == UserType.restaurant) {
+                otherPartyId = shelterId;
+                otherPartyCollection = 'shelters';
+              } else {
+                otherPartyId = restaurantId;
+                otherPartyCollection = 'restaurants';
+              }
+
+              // Get other party info
+              final otherPartyDoc = await FirebaseFirestore.instance
+                  .collection(otherPartyCollection)
+                  .doc(otherPartyId)
+                  .get();
+
+              if (!otherPartyDoc.exists) continue;
+
+              String otherPartyName;
+              if (widget.userType == UserType.restaurant) {
+                final shelter = Shelter.fromJson(otherPartyDoc.data()!);
+                otherPartyName = shelter.organizationName;
+              } else {
+                final restaurant = Restaurant.fromJson(otherPartyDoc.data()!);
+                otherPartyName = restaurant.businessName;
+              }
+
+              chatItems.add(
+                ChatItem(
+                  chatId: chatDoc.id,
+                  donation: donation,
+                  otherPartyName: otherPartyName,
+                  otherPartyId: otherPartyId,
+                  lastMessage: chatData['lastMessage'] as String? ?? '',
+                  lastMessageAt: chatData['lastMessageAt'] as Timestamp?,
+                ),
+              );
+            } catch (e) {
+              continue;
+            }
           }
-          
-          // Get donation details
-          final donationDoc = await FirebaseFirestore.instance
-              .collection('donations')
-              .doc(donationId)
-              .get();
-          
-          if (!donationDoc.exists) continue;
-          
-          final donation = Donation.fromJson(donationDoc.data()!, docId: donationDoc.id);
-          
-          // Get other party details
-          String otherPartyId;
-          String otherPartyCollection;
-          
-          if (widget.userType == UserType.restaurant) {
-            otherPartyId = shelterId;
-            otherPartyCollection = 'shelters';
-          } else {
-            otherPartyId = restaurantId;
-            otherPartyCollection = 'restaurants';
-          }
-          
-          // Get other party info
-          final otherPartyDoc = await FirebaseFirestore.instance
-              .collection(otherPartyCollection)
-              .doc(otherPartyId)
-              .get();
-          
-          if (!otherPartyDoc.exists) continue;
-          
-          String otherPartyName;
-          if (widget.userType == UserType.restaurant) {
-            final shelter = Shelter.fromJson(otherPartyDoc.data()!);
-            otherPartyName = shelter.organizationName;
-          } else {
-            final restaurant = Restaurant.fromJson(otherPartyDoc.data()!);
-            otherPartyName = restaurant.businessName;
-          }
-          
-          chatItems.add(ChatItem(
-            chatId: chatDoc.id,
-            donation: donation,
-            otherPartyName: otherPartyName,
-            otherPartyId: otherPartyId,
-            lastMessage: chatData['lastMessage'] as String? ?? '',
-            lastMessageAt: chatData['lastMessageAt'] as Timestamp?,
-          ));
-          
-        } catch (e) {
-          continue;
-        }
-      }
-      
-      return chatItems;
-    });
+
+          return chatItems;
+        });
   }
 
   // Separate stream for unread counts to get real-time updates
@@ -210,11 +226,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
       if (unreadMessages.docs.isNotEmpty) {
         final batch = FirebaseFirestore.instance.batch();
-        
+
         for (var messageDoc in unreadMessages.docs) {
           batch.update(messageDoc.reference, {'read': true});
         }
-        
+
         await batch.commit();
       }
     } catch (e) {
@@ -225,20 +241,31 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:  const Color.fromARGB(255, 255, 255, 255),
-     
-      drawer: MyDrawer(onItemSelected: widget.onDrawerItemSelected ?? (index) {}),
+      backgroundColor: Theme.of(context).colorScheme.tertiary,
+
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black,
         elevation: 0,
-        title: const Text('Chats'),
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 15.0),
+          child: Image.asset(
+            'lib/assets/2.png',
+            width: 150,
+            height: 150,
+            fit: BoxFit.contain,
+          ),
+        ),
+        title: Text(
+          'Chats',
+          style: TextStyle(color: Theme.of(context).colorScheme.inversePrimary),
+        ),
         actions: [
           IconButton(
             onPressed: () {
               _cleanupBrokenChats();
             },
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh, color: Theme.of(context).colorScheme.inversePrimary,),
             tooltip: 'Refresh',
           ),
         ],
@@ -273,7 +300,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                   Text(
                     'Please try again later',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withAlpha(160),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -286,7 +315,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     label: const Text('Refresh'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2E7D32),
-                      foregroundColor: const Color.fromARGB(255, 0, 0, 0),
+                      foregroundColor: Theme.of(
+                        context,
+                      ).colorScheme.inversePrimary,
                     ),
                   ),
                 ],
@@ -321,7 +352,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         ? 'Start chatting when shelters request your donations'
                         : 'Start chatting by requesting donations from restaurants',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withAlpha(160),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -354,20 +387,25 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       builder: (context, unreadSnapshot) {
         final unreadCount = unreadSnapshot.data ?? 0;
         final hasUnread = unreadCount > 0;
-        
+
         return Container(
-          color: hasUnread 
+          color: hasUnread
               ? const Color(0xFF2E7D32).withAlpha(10)
               : const Color.fromARGB(0, 0, 0, 0),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
             leading: Stack(
               children: [
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: const Color(0xFF2E7D32).withAlpha(20),
                   child: Icon(
-                    widget.userType == UserType.restaurant ? Icons.home : Icons.restaurant,
+                    widget.userType == UserType.restaurant
+                        ? Icons.home
+                        : Icons.restaurant,
                     color: const Color(0xFF2E7D32),
                     size: 28,
                   ),
@@ -407,21 +445,21 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     style: TextStyle(
                       fontWeight: hasUnread ? FontWeight.bold : FontWeight.w600,
                       fontSize: 16,
-                      color: Colors.black,
+                      color: Theme.of(context).colorScheme.inversePrimary,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  chat.lastMessageAt != null 
+                  chat.lastMessageAt != null
                       ? _formatTime(chat.lastMessageAt!.toDate())
                       : '',
                   style: TextStyle(
                     fontSize: 12,
-                    color: hasUnread 
+                    color: hasUnread
                         ? const Color(0xFF2E7D32)
-                        : const Color.fromARGB(217, 0, 0, 0),
+                        : Theme.of(context).colorScheme.inversePrimary,
                     fontWeight: hasUnread ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
@@ -435,15 +473,16 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        chat.lastMessage.isEmpty 
-                            ? 'No messages yet' 
+                        chat.lastMessage.isEmpty
+                            ? 'No messages yet'
                             : chat.lastMessage,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.black.withAlpha(
-                            hasUnread ? 200 : 160
-                          ),
-                          fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
+                          color: Theme.of(context).colorScheme.inversePrimary
+                              .withAlpha(hasUnread ? 200 : 160),
+                          fontWeight: hasUnread
+                              ? FontWeight.w500
+                              : FontWeight.normal,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -451,13 +490,22 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(chat.donation.status).withAlpha(20),
+                        color: _getStatusColor(
+                          chat.donation.status,
+                        ).withAlpha(20),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        chat.donation.status.toString().split('.').last.toUpperCase(),
+                        chat.donation.status
+                            .toString()
+                            .split('.')
+                            .last
+                            .toUpperCase(),
                         style: TextStyle(
                           fontSize: 8,
                           color: _getStatusColor(chat.donation.status),
@@ -483,15 +531,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             onTap: () async {
               // Mark messages as read when opening the chat
               await _markMessagesAsRead(chat.chatId);
-              
+
               if (mounted) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => ChatScreen(
                       donation: chat.donation,
-                      shelterId: widget.userType == UserType.restaurant 
-                          ? chat.otherPartyId 
+                      shelterId: widget.userType == UserType.restaurant
+                          ? chat.otherPartyId
                           : null,
                     ),
                   ),

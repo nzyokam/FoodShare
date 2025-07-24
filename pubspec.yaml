@@ -43,9 +43,5 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
   assets:
-    - lib/assets/1.png
-    - lib/assets/2.png
-    - lib/assets/google_logo.png
-    - web/icons/2.png
-    - web/icons/qr.jpg
-    - web/icons/1.png
+    - lib/assets/
+    - web/icons/

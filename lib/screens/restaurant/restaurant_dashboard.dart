@@ -9,7 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../services/auth_service.dart';
 import '../../models/donation_model.dart';
 import '../../models/restaurant_model.dart';
-import '../../components/drawer.dart';
+
 
 import '../shared/chats_list_screen.dart';
 import 'add_donation_screen.dart';
@@ -138,6 +138,15 @@ class _RestaurantDashboardState extends State<RestaurantDashboard> {
           ? AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 15.0),
+                child: Image.asset(
+                  'lib/assets/4.png',
+                  width: 150,
+                  height: 150,
+                  fit: BoxFit.contain,
+                ),
+              ),
               title: Text(
                 'Dashboard',
                 style: GoogleFonts.poppins(
@@ -153,7 +162,7 @@ class _RestaurantDashboardState extends State<RestaurantDashboard> {
                       MaterialPageRoute(
                         builder: (_) => const AddDonationScreen(),
                       ),
-                    ).then((_) => _loadAnalytics()); // Refresh analytics
+                    ).then((_) => _loadAnalytics()); //refresh analytics
                   },
                   icon: const Icon(Icons.add_circle),
                   tooltip: 'Add Donation',
@@ -161,7 +170,7 @@ class _RestaurantDashboardState extends State<RestaurantDashboard> {
               ],
             )
           : null,
-      drawer: MyDrawer(onItemSelected: _onDrawerItemSelected),
+
       body: _getSelectedScreen(),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color.fromARGB(122, 19, 30, 20),
@@ -200,69 +209,68 @@ class _RestaurantDashboardState extends State<RestaurantDashboard> {
           children: [
             // Welcome Section
             ClipRRect(
-  borderRadius: BorderRadius.circular(20),
-  child: BackdropFilter(
-    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.green.withAlpha(38), 
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF2E7D32).withAlpha(63),
-            const Color(0xFF81C784).withAlpha(63),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withAlpha(63),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(20),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Welcome back!',
-            style: TextStyle(
-              color: Colors.white.withAlpha(213),
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withAlpha(38),
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF2E7D32).withAlpha(63),
+                        const Color(0xFF81C784).withAlpha(63),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withAlpha(63),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(20),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Welcome back!',
+                        style: TextStyle(
+                          color: Colors.white.withAlpha(213),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _restaurant?.businessName ?? 'Restaurant',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Your donations are making a difference! 🌟',
+                        style: TextStyle(
+                          color: Colors.white.withAlpha(188),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _restaurant?.businessName ?? 'Restaurant',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Your donations are making a difference! 🌟',
-            style: TextStyle(
-              color: Colors.white.withAlpha(188),
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    ),
-  ),
-),
-
 
             const SizedBox(height: 24),
 

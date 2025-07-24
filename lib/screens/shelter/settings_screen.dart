@@ -3,7 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../themes/theme_provider.dart';
 import '../../services/auth_service.dart';
-import '../../components/drawer.dart';
+
 import 'package:provider/provider.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -15,23 +15,30 @@ class SettingsScreen extends StatelessWidget {
     final authService = AuthService();
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primary,
-      drawer: MyDrawer(
-        onItemSelected: (index) {
-          // Handle drawer navigation - go back to dashboard
-          Navigator.pop(context);
-        },
-      ),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Settings'),
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 15.0),
+          child: Image.asset(
+            'lib/assets/4.png',
+            width: 150,
+            height: 150,
+            fit: BoxFit.contain,
+          ),
+        ),
+        title: Text(
+          'Settings',
+          style: TextStyle(color: Theme.of(context).colorScheme.inversePrimary),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           // App Settings Section
-          _buildSectionHeader('App Settings'),
+          _buildSectionHeader('App Settings', context),
 
           _buildSettingsCard([
             _buildSettingsTile(
@@ -77,19 +84,9 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Account Section
-          _buildSectionHeader('Account'),
+          _buildSectionHeader('Account', context),
 
           _buildSettingsCard([
-            // _buildSettingsTile(
-            //   'Edit Profile',
-            //   'Update your profile information',
-            //   Icons.person,
-            //   onTap: () {
-            //     ScaffoldMessenger.of(context).showSnackBar(
-            //       const SnackBar(content: Text('Edit profile coming soon!')),
-            //     );
-            //   },
-            // ),
             _buildSettingsTile(
               'Privacy Policy',
               'Read our privacy policy',
@@ -112,7 +109,7 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Support Section
-          _buildSectionHeader('Support'),
+          _buildSectionHeader('Support', context),
 
           _buildSettingsCard([
             _buildSettingsTile(
@@ -146,7 +143,7 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // About Section
-          _buildSectionHeader('About'),
+          _buildSectionHeader('About', context),
 
           _buildSettingsCard([
             _buildSettingsTile(
@@ -169,7 +166,7 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 32),
 
           // Danger Zone
-          _buildSectionHeader('Danger Zone', color: Colors.red),
+          _buildSectionHeader('Danger Zone', color: Colors.red, context),
 
           _buildSettingsCard([
             _buildSettingsTile(
@@ -199,7 +196,11 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title, {Color? color}) {
+  Widget _buildSectionHeader(
+    String title,
+    BuildContext context, {
+    Color? color,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
@@ -207,7 +208,7 @@ class SettingsScreen extends StatelessWidget {
         style: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: color,
+          color: color ?? Theme.of(context).colorScheme.inversePrimary,
         ),
       ),
     );
@@ -305,8 +306,38 @@ class SettingsScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
-              await authService.signOut();
+              try {
+                // Close the dialog first
+                Navigator.pop(context);
+
+                // Show loading indicator
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) =>
+                      const Center(child: CircularProgressIndicator()),
+                );
+
+                // Perform sign out
+                await authService.signOut();
+
+                // Close loading dialog if still mounted
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
+              } catch (e) {
+                // Close loading dialog if it's open
+                if (context.mounted) {
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Sign-Out Error: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Sign Out'),
@@ -331,19 +362,52 @@ class SettingsScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
               try {
-                await authService.deleteAccount();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Account deleted successfully')),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error deleting account: $e'),
-                    backgroundColor: Colors.red,
+                // Close the dialog first
+                Navigator.pop(context);
+
+                // Show loading indicator
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const AlertDialog(
+                    content: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(width: 16),
+                        Text('Deleting account...'),
+                      ],
+                    ),
                   ),
                 );
+
+                // Perform account deletion
+                await authService.deleteAccount();
+
+                // Close loading dialog if still mounted
+                if (context.mounted) {
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Account deleted successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                // Close loading dialog if it's open
+                if (context.mounted) {
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting account: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

@@ -29,13 +29,13 @@ class _UserTypeSelectionState extends State<UserTypeSelection> {
 
     try {
       await _authService.setUserType(_selectedType!);
-      
+
       if (mounted) {
         // Navigate to appropriate profile setup
         Widget nextScreen = _selectedType == UserType.restaurant
             ? const RestaurantProfileSetup()
             : const ShelterProfileSetup();
-            
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => nextScreen),
@@ -43,9 +43,9 @@ class _UserTypeSelectionState extends State<UserTypeSelection> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -57,111 +57,132 @@ class _UserTypeSelectionState extends State<UserTypeSelection> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              const SizedBox(height: 40),
-              
-              // App logo and title
-              Image.asset(
-                    'lib/assets/2.png',
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.contain,
-                  ),
-              const SizedBox(height: 10),
-              
-              Text(
-                'FoodShare',
-                style: GoogleFonts.bebasNeue(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              
-              const SizedBox(height: 10),
-              
-              Text(
-                'Fighting hunger together 🤝',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
-                  fontSize: 16,
-                ),
-              ),
-              
-              const SizedBox(height: 50),
-              
-              Text(
-                'What describes you best?',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              
-              const SizedBox(height: 30),
-              
-              // Restaurant option
-              _buildTypeCard(
-                type: UserType.restaurant,
-                title: 'Restaurant / Food Business',
-                subtitle: 'I have surplus food to donate',
-                icon: Icons.restaurant,
-                features: [
-                  '• Share surplus food',
-                  '• Connect with local shelters',
-                  '• Track your impact',
-                  '• Build community relationships',
-                ],
-              ),
-              
-              const SizedBox(height: 20),
-              
-              // Shelter option
-              _buildTypeCard(
-                type: UserType.shelter,
-                title: 'Shelter / NGO / Community',
-                subtitle: 'I need food donations for people in need',
-                icon: Icons.home,
-                features: [
-                  '• Access fresh food donations',
-                  '• Connect with local restaurants',
-                  '• Serve more people in need',
-                  '• Build sustainable partnerships',
-                ],
-              ),
-              
-              const Spacer(),
-              
-              // Continue button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _continueWithSelectedType,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E7D32),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight:
+                  MediaQuery.of(context).size.height -
+                  MediaQuery.of(context).padding.top -
+                  MediaQuery.of(context).padding.bottom,
+            ),
+            child: IntrinsicHeight(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 40),
+
+                    // App logo and title
+                    Image.asset(
+                      'lib/assets/2.png',
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.contain,
                     ),
-                    elevation: 2,
-                  ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'Continue',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    const SizedBox(height: 10),
+
+                    Text(
+                      'FoodShare',
+                      style: GoogleFonts.bebasNeue(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Text(
+                      'Fighting hunger together 🤝',
+                      style: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withAlpha(180),
+                        fontSize: 16,
+                      ),
+                    ),
+
+                    const SizedBox(height: 50),
+
+                    Text(
+                      'What describes you best?',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    // Restaurant option
+                    _buildTypeCard(
+                      type: UserType.restaurant,
+                      title: 'Restaurant / Food Business',
+                      subtitle: 'I have surplus food to donate',
+                      icon: Icons.restaurant,
+                      features: [
+                        '• Share surplus food',
+                        '• Connect with local shelters',
+                        '• Track your impact',
+                        '• Build community relationships',
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Shelter option
+                    _buildTypeCard(
+                      type: UserType.shelter,
+                      title: 'Shelter / NGO / Community',
+                      subtitle: 'I need food donations for people in need',
+                      icon: Icons.home,
+                      features: [
+                        '• Access fresh food donations',
+                        '• Connect with local restaurants',
+                        '• Serve more people in need',
+                        '• Build sustainable partnerships',
+                      ],
+                    ),
+
+                    const Expanded(child: SizedBox(height: 20)),
+
+                    // Continue button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isLoading
+                            ? null
+                            : _continueWithSelectedType,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2E7D32),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
                         ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : const Text(
+                                'Continue',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+                  ],
                 ),
               ),
-              
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
         ),
       ),
@@ -176,21 +197,19 @@ class _UserTypeSelectionState extends State<UserTypeSelection> {
     required List<String> features,
   }) {
     final isSelected = _selectedType == type;
-    
+
     return GestureDetector(
       onTap: () => setState(() => _selectedType = type),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isSelected 
+          color: isSelected
               ? const Color(0xFF2E7D32).withAlpha(30)
               : Theme.of(context).colorScheme.primary.withAlpha(20),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected 
-                ? const Color(0xFF2E7D32)
-                : Colors.transparent,
+            color: isSelected ? const Color(0xFF2E7D32) : Colors.transparent,
             width: 2,
           ),
         ),
@@ -202,7 +221,7 @@ class _UserTypeSelectionState extends State<UserTypeSelection> {
                 Icon(
                   icon,
                   size: 30,
-                  color: isSelected 
+                  color: isSelected
                       ? const Color(0xFF2E7D32)
                       : Theme.of(context).colorScheme.onSurface,
                 ),
@@ -223,7 +242,9 @@ class _UserTypeSelectionState extends State<UserTypeSelection> {
                         subtitle,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withAlpha(180),
                         ),
                       ),
                     ],
@@ -237,19 +258,23 @@ class _UserTypeSelectionState extends State<UserTypeSelection> {
                   ),
               ],
             ),
-            
+
             const SizedBox(height: 12),
-            
-            ...features.map((feature) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Text(
-                feature,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+
+            ...features.map(
+              (feature) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(
+                  feature,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withAlpha(160),
+                  ),
                 ),
               ),
-            )),
+            ),
           ],
         ),
       ),
