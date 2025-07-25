@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import '../pages/forgot_password_page.dart';
+import '../utils/onboarding_helper.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback showRegisterScreen;
@@ -18,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -39,6 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
+      await OnboardingHelper.markOnboardingAsSeen();
     } on FirebaseAuthException catch (e) {
       String message = 'Login failed';
       if (e.code == 'user-not-found') {
@@ -116,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       filled: true,
                       fillColor: const Color.fromARGB(78, 195, 195, 195),
                       hintStyle: const TextStyle(
-                        color: Color.fromARGB(255, 255, 255, 255),
+                        color: Color.fromARGB(255, 188, 187, 187),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -130,14 +133,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Password TextField
                   TextField(
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       hintText: 'Password',
                       prefixIcon: const Icon(Icons.lock_outlined),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
                       filled: true,
                       fillColor: const Color.fromARGB(78, 195, 195, 195),
                       hintStyle: const TextStyle(
-                        color: Color.fromARGB(255, 255, 255, 255),
+                        color: Color.fromARGB(255, 188, 187, 187),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),

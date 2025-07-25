@@ -125,8 +125,7 @@ class _ShelterProfileSetupState extends State<ShelterProfileSetup> {
         // Force a small delay to ensure Firestore updates propagate
         await Future.delayed(const Duration(milliseconds: 500));
         
-        // The AuthGate stream will automatically redirect to ShelterDashboard
-        // No manual navigation needed
+       
       }
     } catch (e) {
       _showError('Error creating profile: ${e.toString()}');
@@ -203,6 +202,7 @@ class _ShelterProfileSetupState extends State<ShelterProfileSetup> {
                 controller: _organizationNameController,
                 label: 'Organization/Shelter Name *',
                 hint: 'e.g., Hope Children\'s Home',
+                 color: const Color.fromARGB(255, 188, 187, 187),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Organization name is required';
@@ -218,6 +218,7 @@ class _ShelterProfileSetupState extends State<ShelterProfileSetup> {
                 controller: _registrationNumberController,
                 label: 'Registration Number *',
                 hint: 'NGO/CBO registration number',
+                 color: const Color.fromARGB(255, 188, 187, 187),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Registration number is required';
@@ -268,6 +269,7 @@ class _ShelterProfileSetupState extends State<ShelterProfileSetup> {
                 controller: _addressController,
                 label: 'Full Address *',
                 hint: 'Street, building, area',
+                 color: const Color.fromARGB(255, 188, 187, 187),
                 maxLines: 2,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -284,6 +286,7 @@ class _ShelterProfileSetupState extends State<ShelterProfileSetup> {
                 controller: _phoneController,
                 label: 'Phone Number *',
                 hint: '+254 700 000 000',
+                 color: const Color.fromARGB(255, 188, 187, 187),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -300,6 +303,7 @@ class _ShelterProfileSetupState extends State<ShelterProfileSetup> {
                 controller: _capacityController,
                 label: 'Capacity (Number of people you serve) *',
                 hint: 'e.g., 50',
+                 color: const Color.fromARGB(255, 188, 187, 187),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -354,6 +358,7 @@ class _ShelterProfileSetupState extends State<ShelterProfileSetup> {
                 controller: _descriptionController,
                 label: 'Organization Description *',
                 hint: 'Describe your mission, who you serve, and your impact in the community',
+                 color: const Color.fromARGB(255, 188, 187, 187),
                 maxLines: 4,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -402,7 +407,7 @@ class _ShelterProfileSetupState extends State<ShelterProfileSetup> {
     required String hint,
     int maxLines = 1,
     TextInputType? keyboardType,
-    String? Function(String?)? validator,
+    String? Function(String?)? validator, required Color color,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

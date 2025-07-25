@@ -10,7 +10,6 @@ import '../../services/auth_service.dart';
 import '../../models/donation_model.dart';
 import '../../models/restaurant_model.dart';
 
-
 import '../shared/chats_list_screen.dart';
 import 'add_donation_screen.dart';
 import 'my_donations_screen.dart';
@@ -412,59 +411,6 @@ class _RestaurantDashboardState extends State<RestaurantDashboard> {
             ),
 
             const SizedBox(height: 24),
-
-            // Recent Activity (placeholder for now)
-            Text(
-              'Recent Activity',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withAlpha(20),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.primary.withAlpha(50),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.timeline,
-                    size: 48,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Activity Feed Coming Soon',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Track your donation history and shelter interactions',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withAlpha(160),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),

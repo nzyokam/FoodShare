@@ -340,7 +340,10 @@ class SettingsScreen extends StatelessWidget {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Sign Out'),
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
+            ),
           ),
         ],
       ),
@@ -411,7 +414,10 @@ class SettingsScreen extends StatelessWidget {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete Account'),
+            child: const Text(
+              'Delete Account',
+              style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
+            ),
           ),
         ],
       ),

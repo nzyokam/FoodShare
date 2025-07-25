@@ -9,7 +9,7 @@ A Flutter-powered mobile application designed to combat hunger and food waste in
 ## 📱 Project Overview
 
 - **Status**: Active Development (Core Features Implemented)
-- **Type**: Individual Project 
+- **Type**: Individual Project
 - **Platform**: Flutter (built using iOS simulator primarily for iOS, may have issues on Android devices)
 - **Target Region**: Kenya (Nairobi, Mombasa, Nakuru, Eldoret, Kisumu)
 - **Purpose**: Social Impact Application
@@ -21,13 +21,15 @@ To fight hunger in Kenya by creating a direct bridge between restaurants with su
 ## 👥 Current User Roles
 
 ### 🍽️ Restaurants (Food Donors)
+
 - Post surplus food donations with photos and details
 - Manage donation listings (edit, pause, cancel)
 - Accept or decline requests from shelters
 - Track donation history and impact
 - Chat with shelters for coordination
 
-### 🏠 Shelters (Food Recipients) 
+### 🏠 Shelters (Food Recipients)
+
 - Browse available food donations by location and category
 - Request specific donations with personalized messages
 - Filter by food type, location, and expiry time
@@ -37,7 +39,9 @@ To fight hunger in Kenya by creating a direct bridge between restaurants with su
 ## ✨ Implemented Features
 
 ### 🍲 For Restaurants
+
 - **Donation Management**
+
   - Create food listings with photos, quantities, and descriptions
   - Set pickup times and expiry dates
   - Categorize food (fruits, vegetables, meat, dairy, prepared meals, etc.)
@@ -45,6 +49,7 @@ To fight hunger in Kenya by creating a direct bridge between restaurants with su
   - Real-time status tracking (available, reserved, completed, cancelled)
 
 - **Request Handling**
+
   - Receive and review requests from shelters
   - Accept or decline requests with optional messages
   - View shelter information and request messages
@@ -56,13 +61,16 @@ To fight hunger in Kenya by creating a direct bridge between restaurants with su
   - Chat available for reserved and completed donations
 
 ### 🏠 For Shelters
+
 - **Food Discovery**
+
   - Browse donations with search and filter capabilities
   - Filter by city, food category, and keywords
   - View expiry times with urgent notifications
   - See restaurant details and donation descriptions
 
 - **Request System**
+
   - Send personalized request messages to restaurants
   - Track request status across three tabs (pending, approved, declined)
   - Prevent duplicate requests for same donation
@@ -74,12 +82,14 @@ To fight hunger in Kenya by creating a direct bridge between restaurants with su
   - Access to approved donation conversations
 
 ### 🔐 Authentication & User Management
+
 - Secure user registration and login
 - Role-based access (restaurant vs shelter)
 - User profile management
 - Business verification for restaurants
 
 ### 📱 User Interface
+
 - Clean, intuitive design optimized for Kenyan users
 - Tabbed navigation for easy access to features
 - Real-time updates across all screens
@@ -89,6 +99,7 @@ To fight hunger in Kenya by creating a direct bridge between restaurants with su
 ## 🛠️ Technical Implementation
 
 ### **Current Tech Stack**
+
 - **Frontend**: Flutter (Dart)
 - **Backend**: Firebase Firestore (NoSQL Database)
 - **Authentication**: Firebase Auth
@@ -97,13 +108,15 @@ To fight hunger in Kenya by creating a direct bridge between restaurants with su
 - **State Management**: StatefulWidget with Streams
 
 ### **Database Collections**
+
 - `restaurants` - Restaurant profile information
-- `shelters` - Shelter profile information  
+- `shelters` - Shelter profile information
 - `donations` - Food donation listings
 - `requests` - Shelter requests for donations
 - `chats` - Real-time messaging between users
 
 ### **Key Features Implemented**
+
 - Real-time data synchronization
 - Image upload and display
 - Location-based filtering
@@ -115,6 +128,7 @@ To fight hunger in Kenya by creating a direct bridge between restaurants with su
 ## 📊 Current Functionality Status
 
 ### ✅ Completed Features
+
 - User authentication (restaurants & shelters)
 - Food donation creation and management
 - Image upload for food items
@@ -127,12 +141,14 @@ To fight hunger in Kenya by creating a direct bridge between restaurants with su
 - Search functionality
 
 ### 🚧 In Development
+
 - Firebase composite index optimization
 - Performance improvements
 - Bug fixes and refinements
 - User experience enhancements
 
 ### 📋 Planned Features
+
 - Push notifications for new donations and requests
 - Impact tracking (meals saved, CO₂ offset)
 - Admin dashboard for monitoring
@@ -145,6 +161,7 @@ To fight hunger in Kenya by creating a direct bridge between restaurants with su
 ## 🗺️ Current User Flows
 
 ### Restaurant Flow
+
 1. Register as restaurant → Create profile
 2. Post food donation with photos and details
 3. Receive requests from shelters
@@ -153,7 +170,8 @@ To fight hunger in Kenya by creating a direct bridge between restaurants with su
 6. Mark donations as completed
 7. View donation history and impact
 
-### Shelter Flow  
+### Shelter Flow
+
 1. Register as shelter → Create profile
 2. Browse available donations by location/category
 3. Send requests with personalized messages
@@ -165,8 +183,9 @@ To fight hunger in Kenya by creating a direct bridge between restaurants with su
 ## 📍 Geographic Focus
 
 **Primary Cities Supported:**
+
 - Nairobi
-- Mombasa  
+- Mombasa
 - Nakuru
 - Eldoret
 - Kisumu
@@ -177,6 +196,7 @@ The app is designed specifically for the Kenyan market with local city integrati
 ## 🚀 Development Progress
 
 ### Phase 1: Core MVP ✅
+
 - [x] User authentication system
 - [x] Basic food listing and claiming
 - [x] Restaurant and shelter profiles
@@ -184,14 +204,16 @@ The app is designed specifically for the Kenyan market with local city integrati
 - [x] Real-time chat functionality
 
 ### Phase 2: Enhanced Experience (Current)
+
 - [x] Advanced filtering and search
 - [x] Image management
 - [x] Status tracking workflows
-- [ ] Performance optimization
-- [ ] Database indexing completion
-- [ ] UI/UX refinements
+- [x] Performance optimization
+- [x] Database indexing completion
+- [x] UI/UX refinements
 
 ### Phase 3: Scale & Impact (Next)
+
 - [ ] Push notification system
 - [ ] Impact tracking dashboard
 - [ ] Admin monitoring tools
@@ -202,6 +224,7 @@ The app is designed specifically for the Kenyan market with local city integrati
 ## 💽 Database Optimization
 
 Currently implementing Firebase Firestore composite indexes for:
+
 - Donation queries with multiple filters
 - Request status tracking
 - Real-time chat performance
@@ -210,12 +233,14 @@ Currently implementing Firebase Firestore composite indexes for:
 ## 🌐 Social Impact Goals
 
 ### Immediate Impact
+
 - Connect surplus restaurant food with shelters in major Kenyan cities
 - Reduce food waste in urban areas
 - Provide reliable food access for vulnerable populations
 - Build networks between restaurants and aid organizations
 
 ### Long-term Vision
+
 - Expand to rural areas and smaller cities
 - Integrate volunteer delivery networks
 - Add food safety and handling education
@@ -234,6 +259,7 @@ Currently implementing Firebase Firestore composite indexes for:
 ## 🤝 Community Focus
 
 This application addresses real challenges in Kenya:
+
 - High food waste in restaurants
 - Food insecurity in urban areas
 - Limited coordination between food donors and recipients
@@ -249,4 +275,4 @@ This application addresses real challenges in Kenya:
 
 ---
 
-*"Technology can bridge the gap between surplus and need. Every meal saved is a step toward a more food-secure Kenya."*
+_"Technology can bridge the gap between surplus and need. Every meal saved is a step toward a more food-secure Kenya."_

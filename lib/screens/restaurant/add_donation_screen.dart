@@ -94,167 +94,6 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
     }
   }
 
-  // Future<void> _pickImage() async {
-  //   try {
-  //     final XFile? image = await _picker.pickImage(
-  //       source: ImageSource.gallery,
-  //       maxWidth: 800,
-  //       maxHeight: 600,
-  //       imageQuality: 85,
-  //     );
-
-  //     if (image != null) {
-  //       setState(() => _selectedImages.add(File(image.path)));
-  //     }
-  //   } catch (e) {
-  //     _showError('Error picking image: $e');
-  //   }
-  // }
-
-  // Future<void> _takePhoto() async {
-  //   try {
-  //     final XFile? image = await _picker.pickImage(
-  //       source: ImageSource.camera,
-  //       maxWidth: 800,
-  //       maxHeight: 600,
-  //       imageQuality: 85,
-  //     );
-
-  //     if (image != null) {
-  //       setState(() => _selectedImages.add(File(image.path)));
-  //     }
-  //   } catch (e) {
-  //     _showError('Error taking photo: $e');
-  //   }
-  // }
-
-  // void _showImagePickerOptions() {
-  //   showModalBottomSheet(
-  //     context: context,
-  //     builder: (BuildContext ctx) {
-  //       return SafeArea(
-  //         child: Column(
-  //           mainAxisSize: MainAxisSize.min,
-  //           children: [
-  //             ListTile(
-  //               leading: const Icon(Icons.photo_library),
-  //               title: const Text('Choose from Gallery'),
-  //               onTap: () {
-  //                 Navigator.pop(ctx);
-  //                 _pickImage();
-  //               },
-  //             ),
-  //             ListTile(
-  //               leading: const Icon(Icons.photo_camera),
-  //               title: const Text('Take Photo'),
-  //               onTap: () {
-  //                 Navigator.pop(ctx);
-  //                 _takePhoto();
-  //               },
-  //             ),
-  //           ],
-  //         ),
-  //       );
-  //     },
-  //   );
-  // }
-
-  // void _removeImage(int index, {bool isExisting = false}) {
-  //   setState(() {
-  //     if (isExisting) {
-  //       _existingImageUrls.removeAt(index);
-  //     } else {
-  //       _selectedImages.removeAt(index);
-  //     }
-  //   });
-  // }
-
-  // Future<String> _uploadImage(File imageFile) async {
-  //   final user = FirebaseAuth.instance.currentUser!;
-  //   final fileName = DateTime.now().millisecondsSinceEpoch.toString();
-  //   final ref = FirebaseStorage.instance
-  //       .ref()
-  //       .child('donations/${user.uid}/$fileName');
-
-  //   await ref.putFile(imageFile);
-  //   return await ref.getDownloadURL();
-  // }
-
-  // Future<void> _saveDonation() async {
-  //   if (!_formKey.currentState!.validate()) return;
-    
-  //   if (_expiryDate == null || _pickupTime == null) {
-  //     _showError('Please set both expiry date and pickup time');
-  //     return;
-  //   }
-
-  //   if (_selectedImages.isEmpty && _existingImageUrls.isEmpty) {
-  //     _showError('Please add at least one image');
-  //     return;
-  //   }
-
-  //   setState(() => _isLoading = true);
-
-  //   try {
-  //     final user = FirebaseAuth.instance.currentUser!;
-      
-  //     // Get restaurant city
-  //     final restaurantDoc = await FirebaseFirestore.instance
-  //         .collection('restaurants')
-  //         .doc(user.uid)
-  //         .get();
-  //     final city = restaurantDoc.data()?['city'] ?? '';
-
-  //     // Upload new images
-  //     final imageUrls = List<String>.from(_existingImageUrls);
-  //     for (File img in _selectedImages) {
-  //       final url = await _uploadImage(img);
-  //       imageUrls.add(url);
-  //     }
-
-  //     final donationData = {
-  //       'donorId': user.uid,
-  //       'title': _titleController.text.trim(),
-  //       'description': _descriptionController.text.trim(),
-  //       'category': _selectedCategory.toString().split('.').last,
-  //       'quantity': int.parse(_quantityController.text),
-  //       'unit': _unitController.text.trim(),
-  //       'expiryDate': Timestamp.fromDate(_expiryDate!),
-  //       'pickupTime': Timestamp.fromDate(_pickupTime!),
-  //       'imageUrls': imageUrls,
-  //       'status': 'available',
-  //       'city': city,
-  //       'createdAt': FieldValue.serverTimestamp(),
-  //     };
-
-  //     if (widget.donation != null) {
-  //       // Update existing donation
-  //       await FirebaseFirestore.instance
-  //           .collection('donations')
-  //           .doc(widget.donation!.id)
-  //           .update(donationData);
-        
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(content: Text('Donation updated successfully!')),
-  //       );
-  //     } else {
-  //       // Create new donation
-  //       await FirebaseFirestore.instance
-  //           .collection('donations')
-  //           .add(donationData);
-        
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(content: Text('Donation added successfully!')),
-  //       );
-  //     }
-
-  //     Navigator.pop(context);
-  //   } catch (e) {
-  //     _showError('Error saving donation: $e');
-  //   } finally {
-  //     setState(() => _isLoading = false);
-  //   }
-  // }
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -335,14 +174,7 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
     }
   }
 
-  // Also update your validation to remove the image requirement:
-  // Comment out or remove this part in _saveDonation():
-  /*
-  if (_selectedImages.isEmpty && _existingImageUrls.isEmpty) {
-    _showError('Please add at least one image');
-    return;
-  }
-  */
+
 
   @override
   Widget build(BuildContext context) {
@@ -383,6 +215,7 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
                 controller: _titleController,
                 label: 'Food Item Title *',
                 hint: 'e.g., Fresh Vegetables, Prepared Meals',
+                 color: const Color.fromARGB(255, 188, 187, 187),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Title is required';
@@ -438,6 +271,7 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
                       controller: _quantityController,
                       label: 'Quantity *',
                       hint: '10',
+                       color: const Color.fromARGB(255, 141, 141, 141),
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -457,6 +291,7 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
                       controller: _unitController,
                       label: 'Unit *',
                       hint: 'kg, portions, boxes',
+                       color: const Color.fromARGB(255, 188, 187, 187),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return 'Unit is required';
@@ -475,6 +310,7 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
                 controller: _descriptionController,
                 label: 'Description *',
                 hint: 'Describe the food items, freshness, any special instructions...',
+                 color: const Color.fromARGB(255, 188, 187, 187),
                 maxLines: 4,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -513,175 +349,7 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
               
               const SizedBox(height: 20),
               
-              // Images Section
-              // Text(
-              //   'Images *',
-              //   style: TextStyle(
-              //     fontSize: 16,
-              //     fontWeight: FontWeight.w500,
-              //     color: Theme.of(context).colorScheme.onSurface,
-              //   ),
-              // ),
-              
-              // const SizedBox(height: 8),
-              
-              // // Existing Images
-              // if (_existingImageUrls.isNotEmpty) ...[
-              //   Text(
-              //     'Current Images',
-              //     style: TextStyle(
-              //       fontSize: 14,
-              //       color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
-              //     ),
-              //   ),
-              //   const SizedBox(height: 8),
-              //   SizedBox(
-              //     height: 100,
-              //     child: ListView.builder(
-              //       scrollDirection: Axis.horizontal,
-              //       itemCount: _existingImageUrls.length,
-              //       itemBuilder: (context, index) {
-              //         return Stack(
-              //           children: [
-              //             Container(
-              //               width: 100,
-              //               height: 100,
-              //               margin: const EdgeInsets.only(right: 8),
-              //               decoration: BoxDecoration(
-              //                 borderRadius: BorderRadius.circular(8),
-              //                 image: DecorationImage(
-              //                   image: NetworkImage(_existingImageUrls[index]),
-              //                   fit: BoxFit.cover,
-              //                 ),
-              //               ),
-              //             ),
-              //             Positioned(
-              //               top: 4,
-              //               right: 12,
-              //               child: GestureDetector(
-              //                 onTap: () => _removeImage(index, isExisting: true),
-              //                 child: Container(
-              //                   padding: const EdgeInsets.all(4),
-              //                   decoration: const BoxDecoration(
-              //                     color: Colors.red,
-              //                     shape: BoxShape.circle,
-              //                   ),
-              //                   child: const Icon(
-              //                     Icons.close,
-              //                     color: Colors.white,
-              //                     size: 16,
-              //                   ),
-              //                 ),
-              //               ),
-              //             ),
-              //           ],
-              //         );
-              //       },
-              //     ),
-              //   ),
-              //   const SizedBox(height: 16),
-              // ],
-              
-              // // New Images
-              // if (_selectedImages.isNotEmpty) ...[
-              //   Text(
-              //     'New Images',
-              //     style: TextStyle(
-              //       fontSize: 14,
-              //       color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
-              //     ),
-              //   ),
-              //   const SizedBox(height: 8),
-              //   SizedBox(
-              //     height: 100,
-              //     child: ListView.builder(
-              //       scrollDirection: Axis.horizontal,
-              //       itemCount: _selectedImages.length,
-              //       itemBuilder: (context, index) {
-              //         return Stack(
-              //           children: [
-              //             Container(
-              //               width: 100,
-              //               height: 100,
-              //               margin: const EdgeInsets.only(right: 8),
-              //               decoration: BoxDecoration(
-              //                 borderRadius: BorderRadius.circular(8),
-              //                 image: DecorationImage(
-              //                   image: FileImage(_selectedImages[index]),
-              //                   fit: BoxFit.cover,
-              //                 ),
-              //               ),
-              //             ),
-              //             Positioned(
-              //               top: 4,
-              //               right: 12,
-              //               child: GestureDetector(
-              //                 onTap: () => _removeImage(index),
-              //                 child: Container(
-              //                   padding: const EdgeInsets.all(4),
-              //                   decoration: const BoxDecoration(
-              //                     color: Colors.red,
-              //                     shape: BoxShape.circle,
-              //                   ),
-              //                   child: const Icon(
-              //                     Icons.close,
-              //                     color: Colors.white,
-              //                     size: 16,
-              //                   ),
-              //                 ),
-              //               ),
-              //             ),
-              //           ],
-              //         );
-              //       },
-              //     ),
-              //   ),
-              //   const SizedBox(height: 16),
-              // ],
-              
-              // Add Image Button
-              // GestureDetector(
-              //   onTap: _showImagePickerOptions,
-              //   child: Container(
-              //     width: double.infinity,
-              //     padding: const EdgeInsets.all(16),
-              //     decoration: BoxDecoration(
-              //       border: Border.all(
-              //         color: Theme.of(context).colorScheme.primary.withAlpha(100),
-              //         style: BorderStyle.solid,
-              //       ),
-              //       borderRadius: BorderRadius.circular(12),
-              //       color: Theme.of(context).colorScheme.primary.withAlpha(10),
-              //     ),
-              //     child: Column(
-              //       children: [
-              //         Icon(
-              //           Icons.add_a_photo,
-              //           size: 32,
-              //           color: Theme.of(context).colorScheme.primary,
-              //         ),
-              //         const SizedBox(height: 8),
-              //         Text(
-              //           'Add Photos',
-              //           style: TextStyle(
-              //             fontSize: 14,
-              //             fontWeight: FontWeight.w500,
-              //             color: Theme.of(context).colorScheme.primary,
-              //           ),
-              //         ),
-              //         Text(
-              //           'Tap to add photos of your food donation',
-              //           style: TextStyle(
-              //             fontSize: 12,
-              //             color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
-              //           ),
-              //         ),
-              //       ],
-              //     ),
-              //   ),
-              // ),
-              
-              // const SizedBox(height: 32),
+         
               
               // Save Button
               if (_isLoading)
@@ -724,7 +392,7 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
     required String hint,
     int maxLines = 1,
     TextInputType? keyboardType,
-    String? Function(String?)? validator,
+    String? Function(String?)? validator, required Color color,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

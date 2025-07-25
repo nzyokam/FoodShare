@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Food {
-  final String name; // Name of the food item
-  final String description; // Description of the food item
-  final String imageUrl; // URL of the food image
+  final String name; 
+  final String description; 
+
   final String location;
   final Timestamp availableAt;
 
@@ -14,7 +14,7 @@ class Food {
   Food({
     required this.name,
     required this.description,
-    required this.imageUrl,
+  
     required this.location,
     required this.availableAt,
 
@@ -27,7 +27,7 @@ class Food {
     return Food(
       name: json['name'] ?? '',
       description: json['description'] ?? '',
-      imageUrl: json['imageUrl'] ?? '',
+   
       location: json['location'] ?? '',
       availableAt: json['availableAt'] ?? Timestamp.now(),
 
@@ -44,7 +44,7 @@ class Food {
     return {
       'name': name,
       'description': description,
-      'imageUrl': imageUrl,
+     
       'location': location,
       'availableAt': availableAt,
 

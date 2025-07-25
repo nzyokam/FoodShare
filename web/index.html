@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <!--
+  <head>
+    <!--
     If you are serving your web app in a path other than the root, change the
     href value below to reflect the base path you are serving from.
 
@@ -14,89 +14,245 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-  <base href="$FLUTTER_BASE_HREF">
+    <base href="$FLUTTER_BASE_HREF" />
 
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="FoodShare - Connecting restaurants with shelters to reduce food waste">
+    <meta charset="UTF-8" />
+    <meta content="IE=Edge" http-equiv="X-UA-Compatible" />
+    <meta
+      name="description"
+      content="FoodShare - Connecting restaurants with shelters to reduce food waste"
+    />
 
-  <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="FoodShare">
-  <link rel="apple-touch-icon" href="icons/2.png">
+    <!-- iOS meta tags & icons -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="FoodShare" />
+    <link rel="apple-touch-icon" href="icons/2.png" />
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="icons/2.png"/>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="icons/2.png" />
 
-  <title>FoodShare</title>
-  <link rel="manifest" href="manifest.json">
+    <title>FoodShare</title>
+    <link rel="manifest" href="manifest.json" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-</head>
-<body>
-  <!-- Firebase Configuration -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCcjwP2AP1YekF3Urg-EJ5T743-5Jsnyyc",
-      authDomain: "foodsharing-5777b.firebaseapp.com",
-      projectId: "foodsharing-5777b",
-      storageBucket: "foodsharing-5777b.firebasestorage.app",
-      messagingSenderId: "383740409419",
-      appId: "1:383740409419:web:6462e232a50cc99ef33fce",
-      measurementId: "G-WY152K3N6X",
-    };
-    
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    window.firebase = { app, auth, db };
-  </script>
-
-  <script>
-    var serviceWorkerVersion = null;
-    var scriptLoaded = false;
-    function loadMainDartJs() {
-      if (scriptLoaded) {
-        return;
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background-color: rgb(19, 30, 20);
+        overflow: hidden;
       }
-      scriptLoaded = true;
-      var scriptTag = document.createElement('script');
-      scriptTag.src = 'flutter.js';
-      scriptTag.type = 'application/javascript';
-      document.body.append(scriptTag);
 
-      scriptTag.addEventListener("load", nextMain);
-    }
+      #loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: rgb(19, 30, 20);
+        z-index: 9999;
+        transition: opacity 0.5s ease-out;
+      }
 
-    function nextMain() {
-      // Download main.dart.js
-      _flutter.loader.loadEntrypoint({
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp();
-          });
+      .logo {
+        width: 120px;
+        height: 120px;
+        margin-bottom: 30px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        animation: logoFloat 3s ease-in-out infinite;
+      }
+
+      .app-name {
+        font-size: 32px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 40px;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        letter-spacing: 1px;
+      }
+
+      .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .loading-dots {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: white;
+        animation: dotPulse 1.5s infinite ease-in-out;
+      }
+
+      .dot:nth-child(1) {
+        animation-delay: -0.3s;
+      }
+      .dot:nth-child(2) {
+        animation-delay: -0.15s;
+      }
+      .dot:nth-child(3) {
+        animation-delay: 0s;
+      }
+
+      .loading-text {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 16px;
+        font-weight: 400;
+        margin-top: 10px;
+      }
+
+      @keyframes logoFloat {
+        0%,
+        100% {
+          transform: translateY(0px);
         }
-      });
-    }
+        50% {
+          transform: translateY(-10px);
+        }
+      }
 
-    if ('serviceWorker' in navigator) {
-      // Service workers are supported. Use them.
-      window.addEventListener('load', function () {
-        // Wait for registration to finish before dropping the <script> tag.
-        // Otherwise, the browser will load the script multiple times,
-        // potentially different versions.
-        var serviceWorkerUrl = 'flutter_service_worker.js';
-        navigator.serviceWorker.register(serviceWorkerUrl)
-          .then((reg) => {
+      @keyframes dotPulse {
+        0%,
+        80%,
+        100% {
+          transform: scale(0.8);
+          opacity: 0.5;
+        }
+        40% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      .hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* Responsive design */
+      @media (max-width: 480px) {
+        .logo {
+          width: 100px;
+          height: 100px;
+          margin-bottom: 25px;
+        }
+
+        .app-name {
+          font-size: 28px;
+          margin-bottom: 35px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Loading Screen -->
+    <div id="loading">
+      <img src="icons/4.png" alt="FoodShare Logo" class="logo" />
+      <div class="app-name">FoodShare</div>
+      <div class="loading-container">
+        <div class="loading-dots">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <div class="loading-text">Loading the app...</div>
+      </div>
+    </div>
+
+    <!-- Firebase Configuration -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+      import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+      import { getFirestore } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyCcjwP2AP1YekF3Urg-EJ5T743-5Jsnyyc",
+        authDomain: "foodsharing-5777b.firebaseapp.com",
+        projectId: "foodsharing-5777b",
+        storageBucket: "foodsharing-5777b.firebasestorage.app",
+        messagingSenderId: "383740409419",
+        appId: "1:383740409419:web:6462e232a50cc99ef33fce",
+        measurementId: "G-WY152K3N6X",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      window.firebase = { app, auth, db };
+    </script>
+
+    <script>
+      var serviceWorkerVersion = null;
+      var scriptLoaded = false;
+
+      function hideLoadingScreen() {
+        const loadingElement = document.getElementById("loading");
+        if (loadingElement) {
+          loadingElement.classList.add("hidden");
+          setTimeout(() => {
+            loadingElement.style.display = "none";
+          }, 500);
+        }
+      }
+
+      function loadMainDartJs() {
+        if (scriptLoaded) {
+          return;
+        }
+        scriptLoaded = true;
+        var scriptTag = document.createElement("script");
+        scriptTag.src = "flutter.js";
+        scriptTag.type = "application/javascript";
+        document.body.append(scriptTag);
+
+        scriptTag.addEventListener("load", nextMain);
+      }
+
+      function nextMain() {
+        // Download main.dart.js
+        _flutter.loader.loadEntrypoint({
+          onEntrypointLoaded: function (engineInitializer) {
+            engineInitializer.initializeEngine().then(function (appRunner) {
+              appRunner.runApp().then(() => {
+                // Hide loading screen once Flutter app is running
+                setTimeout(hideLoadingScreen, 1000);
+              });
+            });
+          },
+        });
+      }
+
+      if ("serviceWorker" in navigator) {
+        // Service workers are supported. Use them.
+        window.addEventListener("load", function () {
+          // Wait for registration to finish before dropping the <script> tag.
+          // Otherwise, the browser will load the script multiple times,
+          // potentially different versions.
+          var serviceWorkerUrl = "flutter_service_worker.js";
+          navigator.serviceWorker.register(serviceWorkerUrl).then((reg) => {
             function waitForActivation(serviceWorker) {
-              serviceWorker.addEventListener('statechange', () => {
-                if (serviceWorker.state == 'activated') {
-                  console.log('Installed new service worker.');
+              serviceWorker.addEventListener("statechange", () => {
+                if (serviceWorker.state == "activated") {
+                  console.log("Installed new service worker.");
                   loadMainDartJs();
                 }
               });
@@ -108,31 +264,31 @@
             } else if (!reg.active) {
               // When the app updates the serviceWorkerVersion changes, so we
               // need to ask the service worker to update.
-              console.log('New service worker available.');
+              console.log("New service worker available.");
               reg.update();
               waitForActivation(reg.installing);
             } else {
               // Existing service worker is still good.
-              console.log('Loading app from service worker.');
+              console.log("Loading app from service worker.");
               loadMainDartJs();
             }
           });
 
-        // If service worker doesn't succeed in a reasonable amount of time,
-        // fallback to plaint <script> tag.
-        setTimeout(() => {
-          if (!scriptLoaded) {
-            console.warn(
-              'Failed to load app from service worker. Falling back to plain <script> tag.',
-            );
-            loadMainDartJs();
-          }
-        }, 4000);
-      });
-    } else {
-      // Service workers not supported. Just drop the <script> tag.
-      loadMainDartJs();
-    }
-  </script>
-</body>
+          // If service worker doesn't succeed in a reasonable amount of time,
+          // fallback to plaint <script> tag.
+          setTimeout(() => {
+            if (!scriptLoaded) {
+              console.warn(
+                "Failed to load app from service worker. Falling back to plain <script> tag."
+              );
+              loadMainDartJs();
+            }
+          }, 4000);
+        });
+      } else {
+        // Service workers not supported. Just drop the <script> tag.
+        loadMainDartJs();
+      }
+    </script>
+  </body>
 </html>

@@ -15,14 +15,14 @@ class RestaurantProfileSetup extends StatefulWidget {
 class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
   final _formKey = GlobalKey<FormState>();
   final _authService = AuthService();
-  
+
   // Form controllers
   final _businessNameController = TextEditingController();
   final _businessLicenseController = TextEditingController();
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
   final _descriptionController = TextEditingController();
-  
+
   String _selectedCity = '';
   final List<String> _selectedCuisineTypes = [];
   final Map<String, String> _operatingHours = {};
@@ -36,7 +36,7 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
     'Kisumu',
     'Thika',
     'Nyeri',
-    'Other'
+    'Other',
   ];
 
   final List<String> _cuisineOptions = [
@@ -52,7 +52,7 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
     'Vegetarian',
     'Vegan',
     'Halal',
-    'Other'
+    'Other',
   ];
 
   @override
@@ -76,7 +76,7 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
 
     try {
       final user = _authService.currentUser!;
-      
+
       final restaurant = Restaurant(
         uid: user.uid,
         businessName: _businessNameController.text.trim(),
@@ -165,21 +165,24 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
                       'This helps shelters find and trust you',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withAlpha(160),
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 30),
-              
+
               // Business Name
               _buildTextField(
                 controller: _businessNameController,
                 label: 'Business/Restaurant Name *',
                 hint: 'e.g., Mama\'s Kitchen',
+                color: const Color.fromARGB(255, 188, 187, 187),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Business name is required';
@@ -187,14 +190,15 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
                   return null;
                 },
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               // Business License
               _buildTextField(
                 controller: _businessLicenseController,
                 label: 'Business License Number *',
                 hint: 'Enter your business registration number',
+                color: const Color.fromARGB(255, 188, 187, 187),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Business license is required';
@@ -202,9 +206,9 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
                   return null;
                 },
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               // City Selection
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,28 +227,34 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
                     decoration: InputDecoration(
                       hintText: 'Select your city',
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.primary.withAlpha(20),
+                      fillColor: Theme.of(
+                        context,
+                      ).colorScheme.primary.withAlpha(20),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
                     ),
-                    items: _cities.map((city) => DropdownMenuItem(
-                      value: city,
-                      child: Text(city),
-                    )).toList(),
-                    onChanged: (value) => setState(() => _selectedCity = value ?? ''),
+                    items: _cities
+                        .map(
+                          (city) =>
+                              DropdownMenuItem(value: city, child: Text(city)),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _selectedCity = value ?? ''),
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               // Address
               _buildTextField(
                 controller: _addressController,
                 label: 'Full Address *',
                 hint: 'Street, building, area',
+                color: const Color.fromARGB(255, 188, 187, 187),
                 maxLines: 2,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -253,14 +263,15 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
                   return null;
                 },
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               // Phone
               _buildTextField(
                 controller: _phoneController,
                 label: 'Phone Number *',
                 hint: '+254 700 000 000',
+                color: const Color.fromARGB(255, 188, 187, 187),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -269,9 +280,9 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
                   return null;
                 },
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               // Cuisine Types
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,7 +300,9 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
                     spacing: 8,
                     runSpacing: 8,
                     children: _cuisineOptions.map((cuisine) {
-                      final isSelected = _selectedCuisineTypes.contains(cuisine);
+                      final isSelected = _selectedCuisineTypes.contains(
+                        cuisine,
+                      );
                       return FilterChip(
                         label: Text(cuisine),
                         selected: isSelected,
@@ -302,26 +315,30 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
                             }
                           });
                         },
-                        backgroundColor: Theme.of(context).colorScheme.primary.withAlpha(20),
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primary.withAlpha(20),
                         selectedColor: const Color(0xFF2E7D32).withAlpha(100),
                       );
                     }).toList(),
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               // Description
               _buildTextField(
                 controller: _descriptionController,
                 label: 'Business Description',
-                hint: 'Tell shelters about your restaurant and commitment to reducing food waste',
+                hint:
+                    'Tell shelters about your restaurant and commitment to reducing food waste',
+                color: const Color.fromARGB(255, 188, 187, 187),
                 maxLines: 3,
               ),
-              
+
               const SizedBox(height: 40),
-              
+
               // Save Button
               SizedBox(
                 width: double.infinity,
@@ -340,11 +357,14 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
                           'Complete Setup',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                 ),
               ),
-              
+
               const SizedBox(height: 20),
             ],
           ),
@@ -360,6 +380,7 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
     int maxLines = 1,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    required color,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -4,7 +4,7 @@ import 'package:foodshare/screens/shared/edit_profile_screen.dart';
 import '../../services/auth_service.dart';
 import '../../models/restaurant_model.dart';
 import '../../models/shelter_model.dart';
-
+import 'dart:ui';
 import 'package:foodshare/models/user_model.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -92,7 +92,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -117,95 +116,140 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: widget.userType == UserType.restaurant
-                      ? [
-                          const Color.fromARGB(255, 8, 28, 9),
-                          const Color(0xFF66BB6A),
-                        ]
-                      : [
-                          const Color.fromARGB(255, 19, 52, 20),
-                          const Color(0xFF81C784),
-                        ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(20),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
+           
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.topCenter,
+              children: [
+                // Main profile card 
+                Container(
+                  
+                  margin: const EdgeInsets.only(top: 30), 
+                  width: double.infinity,
+                  
+                  padding: const EdgeInsets.only(
+                    top: 60, 
+                    bottom: 24,
+                    left: 24,
+                    right: 24,
                   ),
-                ],
-              ),
-              child:
-                  //profile header
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.white.withAlpha(38),
-                        child: Icon(
-                          widget.userType == UserType.restaurant
-                              ? Icons.restaurant
-                              : Icons.home,
-                          size: 50,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        widget.userType == UserType.restaurant
-                            ? (_restaurant?.businessName ?? 'Restaurant')
-                            : (_shelter?.organizationName ?? 'Organization'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        _authService.currentUser?.email ?? '',
-                        style: TextStyle(
-                          color: Colors.white.withAlpha(213),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 6,
-                        ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                      child: Container(
+                        padding: const EdgeInsets.all(30), 
                         decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(38),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          widget.userType == UserType.restaurant
-                              ? 'Restaurant'
-                              : 'Shelter',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
+                          
+                          color: Theme.of(context).colorScheme.surface.withAlpha(230),
+                         
+                          border: Border.all(
+                            color: Colors.grey.withAlpha(100),
+                            width: 1.5,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(20),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            // Organization/Restaurant Name
+                            Text(
+                              widget.userType == UserType.restaurant
+                                  ? (_restaurant?.businessName ?? 'Restaurant')
+                                  : (_shelter?.organizationName ?? 'Organization'),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            
+                            const SizedBox(height: 12),
+                            
+                            // Account Type Badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2E7D32).withAlpha(51),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: const Color(0xFF2E7D32).withAlpha(100),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                widget.userType == UserType.restaurant
+                                    ? 'Restaurant Account'
+                                    : 'Shelter Account',
+                                style:  TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // Email
+                            Text(
+                              _authService.currentUser?.email ?? '',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
+                ),
+                
+                // Overlapping Circle Avatar
+                Positioned(
+                  top: 0,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(51), 
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 60,
+                      backgroundColor: const Color.fromARGB(255, 16, 47, 18), 
+                      child: Icon(
+                        widget.userType == UserType.restaurant
+                            ? Icons.restaurant
+                            : Icons.home,
+                        size: 60,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
+
             const SizedBox(height: 32),
 
             // Profile Details

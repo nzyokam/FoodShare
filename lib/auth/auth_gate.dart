@@ -2,7 +2,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:foodshare/auth/auth_page.dart';
+import 'package:foodshare/auth/onboarding_screen.dart';
 import 'package:foodshare/models/user_model.dart';
 //import '../services/auth_service.dart';
 import '../screens/restaurant/restaurant_dashboard.dart';
@@ -20,8 +22,38 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
+  bool? _hasSeenOnboarding;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboardingStatus();
+  }
+
+  Future<void> _checkOnboardingStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+    setState(() {
+      _hasSeenOnboarding = hasSeenOnboarding;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Still checking onboarding status
+    if (_hasSeenOnboarding == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // Show onboarding if user hasn't seen it and is not logged in
+    if (!_hasSeenOnboarding! && FirebaseAuth.instance.currentUser == null) {
+      return const OnboardingScreen();
+    }
+
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
@@ -78,7 +110,7 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 
-  
+  //demoa2##
   Stream<ProfileStatus> _getProfileStatusStream() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return Stream.value(ProfileStatus.incomplete);
@@ -126,4 +158,3 @@ enum ProfileStatus {
   completeShelter,
   incomplete,
 }
-

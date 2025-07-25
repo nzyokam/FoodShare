@@ -87,7 +87,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 filled: true,
                 fillColor: const Color.fromARGB(78, 195, 195, 195),
                 hintStyle: const TextStyle(
-                  color: Color.fromARGB(255, 255, 255, 255),
+                  color: Color.fromARGB(255, 188, 187, 187),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
