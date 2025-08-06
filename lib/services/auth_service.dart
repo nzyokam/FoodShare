@@ -100,10 +100,28 @@ class AuthService {
     }
 
     try {
-      await _firestore.collection('users').doc(currentUser!.uid).update({
-        'userType': userType.toString().split('.').last,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      final userRef = _firestore.collection('users').doc(currentUser!.uid);
+      final doc = await userRef.get();
+      
+      if (!doc.exists) {
+        // If document doesn't exist (social auth user), create it with user type
+        await userRef.set({
+          'uid': currentUser!.uid,
+          'email': currentUser!.email,
+          'displayName': currentUser!.displayName,
+          'photoURL': currentUser!.photoURL,
+          'userType': userType.toString().split('.').last,
+          'profileComplete': false,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // If document exists, just update the user type
+        await userRef.update({
+          'userType': userType.toString().split('.').last,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
     } catch (e) {
       print('Error setting user type: $e');
       rethrow;
@@ -117,10 +135,27 @@ class AuthService {
     }
 
     try {
-      await _firestore.collection('users').doc(currentUser!.uid).update({
-        'profileComplete': true,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      final userRef = _firestore.collection('users').doc(currentUser!.uid);
+      final doc = await userRef.get();
+      
+      if (!doc.exists) {
+        // Create document if it doesn't exist
+        await userRef.set({
+          'uid': currentUser!.uid,
+          'email': currentUser!.email,
+          'displayName': currentUser!.displayName,
+          'photoURL': currentUser!.photoURL,
+          'profileComplete': true,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Update existing document
+        await userRef.update({
+          'profileComplete': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
     } catch (e) {
       print('Error marking profile complete: $e');
       rethrow;

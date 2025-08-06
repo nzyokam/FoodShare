@@ -62,5 +62,19 @@
         </array>
     </dict>
 </array>
+<!-- Google Sign In -->
+<key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <string>YOUR_REVERSED_CLIENT_ID</string>
+        </array>
+    </dict>
+</array>
+
+<!-- Add your Google Service Info plist -->
+<key>CLIENT_ID</key>
+<string>383740409419-b3f1j87l3t5vlk6cu7ddo7fumq99ms8c.apps.googleusercontent.com</string>
 </dict>
 </plist>

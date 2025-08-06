@@ -1,11 +1,14 @@
+// screens/shelter/profile_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:foodshare/screens/shared/edit_profile_screen.dart';
 import '../../services/auth_service.dart';
+import '../../services/social_auth_service.dart';
 import '../../models/restaurant_model.dart';
 import '../../models/shelter_model.dart';
 import 'dart:ui';
 import 'package:foodshare/models/user_model.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserType userType;
@@ -22,8 +25,10 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
+  final SocialAuthService _socialAuthService = SocialAuthService();
   Restaurant? _restaurant;
   Shelter? _shelter;
+  Map<String, dynamic>? _userData;
   bool _isLoading = true;
 
   @override
@@ -36,6 +41,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final user = _authService.currentUser!;
 
+      // Load user data from Firestore
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      
+      if (userDoc.exists) {
+        setState(() {
+          _userData = userDoc.data();
+        });
+      }
+
+      // Load restaurant or shelter data
       if (widget.userType == UserType.restaurant) {
         final doc = await FirebaseFirestore.instance
             .collection('restaurants')
@@ -84,6 +102,120 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  String _getAuthProvider() {
+    final provider = _userData?['provider'] ?? 'email';
+    switch (provider) {
+      case 'google':
+        return 'Google';
+      case 'apple':
+        return 'Apple';
+      case 'github':
+        return 'GitHub';
+      default:
+        return 'Email';
+    }
+  }
+
+  Widget _buildProfileAvatar() {
+    final user = _authService.currentUser;
+    final photoURL = user?.photoURL ?? _userData?['photoURL'];
+    final displayName = user?.displayName ?? 
+                       _userData?['displayName'] ?? 
+                       (widget.userType == UserType.restaurant 
+                           ? _restaurant?.businessName 
+                           : _shelter?.organizationName) ?? 
+                       'User';
+
+    if (photoURL != null && photoURL.isNotEmpty) {
+      // User has a profile photo (from social auth)
+      return Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(51),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: CircleAvatar(
+          radius: 60,
+          backgroundColor: const Color.fromARGB(255, 16, 47, 18),
+          child: ClipOval(
+            child: CachedNetworkImage(
+              imageUrl: photoURL,
+              width: 116,
+              height: 116,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                color: const Color.fromARGB(255, 16, 47, 18),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
+              errorWidget: (context, url, error) => _buildDefaultAvatar(displayName),
+            ),
+          ),
+        ),
+      );
+    } else {
+      // No profile photo - show default avatar
+      return Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(51),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: _buildDefaultAvatar(displayName),
+      );
+    }
+  }
+
+  Widget _buildDefaultAvatar(String displayName) {
+    // Get initials from display name
+    String initials = 'U';
+    if (displayName.isNotEmpty) {
+      final parts = displayName.split(' ');
+      if (parts.length >= 2) {
+        initials = '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+      } else {
+        initials = displayName.substring(0, min(2, displayName.length)).toUpperCase();
+      }
+    }
+
+    return CircleAvatar(
+      radius: 60,
+      backgroundColor: const Color.fromARGB(255, 16, 47, 18),
+      child: widget.userType == UserType.restaurant || widget.userType == UserType.shelter
+          ? Text(
+              initials,
+              style: const TextStyle(
+                fontSize: 40,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            )
+          : Icon(
+              widget.userType == UserType.restaurant
+                  ? Icons.restaurant
+                  : Icons.home,
+              size: 60,
+              color: Colors.white,
+            ),
+    );
+  }
+
+  int min(int a, int b) => a < b ? a : b;
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -116,19 +248,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-           
             Stack(
               clipBehavior: Clip.none,
               alignment: Alignment.topCenter,
               children: [
-                // Main profile card 
+                // Main profile card
                 Container(
-                  
-                  margin: const EdgeInsets.only(top: 30), 
+                  margin: const EdgeInsets.only(top: 30),
                   width: double.infinity,
-                  
                   padding: const EdgeInsets.only(
-                    top: 60, 
+                    top: 60,
                     bottom: 24,
                     left: 24,
                     right: 24,
@@ -138,11 +267,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                       child: Container(
-                        padding: const EdgeInsets.all(30), 
+                        padding: const EdgeInsets.all(30),
                         decoration: BoxDecoration(
-                          
                           color: Theme.of(context).colorScheme.surface.withAlpha(230),
-                         
                           border: Border.all(
                             color: Colors.grey.withAlpha(100),
                             width: 1.5,
@@ -173,31 +300,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             
                             const SizedBox(height: 12),
                             
-                            // Account Type Badge
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF2E7D32).withAlpha(51),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: const Color(0xFF2E7D32).withAlpha(100),
-                                  width: 1,
+                            // Account Type Badge with Auth Provider
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2E7D32).withAlpha(51),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: const Color(0xFF2E7D32).withAlpha(100),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    widget.userType == UserType.restaurant
+                                        ? 'Restaurant Account'
+                                        : 'Shelter Account',
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              child: Text(
-                                widget.userType == UserType.restaurant
-                                    ? 'Restaurant Account'
-                                    : 'Shelter Account',
-                                style:  TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.5,
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color.fromARGB(255, 9, 76, 131).withAlpha(30),
+                                    borderRadius: BorderRadius.circular(15),
+                                    border: Border.all(
+                                      color: const Color.fromARGB(255, 13, 38, 58).withAlpha(100),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        _getProviderIcon(),
+                                        size: 14,
+                                        color: const Color.fromARGB(255, 18, 76, 123),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _getAuthProvider(),
+                                        style: const TextStyle(
+                                          color: Color.fromARGB(255, 16, 68, 110),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
                             
                             const SizedBox(height: 16),
@@ -212,6 +378,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               textAlign: TextAlign.center,
                             ),
+                            
+                            // Display Name (if different from business/org name)
+                            if (_userData?['displayName'] != null &&
+                                _userData!['displayName'] != (widget.userType == UserType.restaurant
+                                    ? _restaurant?.businessName
+                                    : _shelter?.organizationName))
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  _userData!['displayName'],
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
+                                    fontSize: 13,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -219,33 +403,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 
-                // Overlapping Circle Avatar
+                // Profile Avatar with photo
                 Positioned(
                   top: 0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(51), 
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 60,
-                      backgroundColor: const Color.fromARGB(255, 16, 47, 18), 
-                      child: Icon(
-                        widget.userType == UserType.restaurant
-                            ? Icons.restaurant
-                            : Icons.home,
-                        size: 60,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
+                  child: _buildProfileAvatar(),
                 ),
               ],
             ),
@@ -271,12 +432,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 16),
 
             _buildActionButton('Sign Out', Icons.logout, Colors.red, () async {
-              await _authService.signOut();
+              await _socialAuthService.signOut();
             }),
           ],
         ),
       ),
     );
+  }
+
+  IconData _getProviderIcon() {
+    final provider = _userData?['provider'] ?? 'email';
+    switch (provider) {
+      case 'google':
+        return Icons.g_mobiledata;
+      case 'apple':
+        return Icons.apple;
+      case 'github':
+        return Icons.code;
+      default:
+        return Icons.email;
+    }
   }
 
   Widget _buildRestaurantDetails(Restaurant restaurant) {
@@ -400,9 +575,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .map(
             (item) => Chip(
               label: Text(item),
-              backgroundColor: Theme.of(
-                context,
-              ).colorScheme.primary.withAlpha(20),
+              backgroundColor: Theme.of(context).colorScheme.primary.withAlpha(20),
             ),
           )
           .toList(),
