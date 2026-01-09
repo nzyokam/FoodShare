@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import '../services/auth_service.dart';
 import '../services/social_auth_service.dart';
-import '../pages/forgot_password_page.dart';
+//import '../pages/forgot_password_page.dart';
 import '../utils/onboarding_helper.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -23,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _authService = AuthService();
   final _socialAuthService = SocialAuthService();
   bool _isLoading = false;
-  bool _obscurePassword = true;
+  //bool _obscurePassword = true;
   String _loadingProvider = '';
 
   @override
@@ -33,44 +33,44 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _signInWithEmail() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      _showError('Please fill in all fields');
-      return;
-    }
+//  Future<void> _signInWithEmail() async {
+//     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+//       _showError('Please fill in all fields');
+//       return;
+//     }
 
-    setState(() {
-      _isLoading = true;
-      _loadingProvider = 'email';
-    });
+//     setState(() {
+//       _isLoading = true;
+//       _loadingProvider = 'email';
+//     });
 
-    try {
-      await _authService.signInWithEmailPassword(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-      );
-      await OnboardingHelper.markOnboardingAsSeen();
-    } on FirebaseAuthException catch (e) {
-      String message = 'Login failed';
-      if (e.code == 'user-not-found') {
-        message = 'No account found with this email';
-      } else if (e.code == 'wrong-password') {
-        message = 'Incorrect password';
-      } else if (e.code == 'invalid-email') {
-        message = 'Invalid email address';
-      }
-      _showError(message);
-    } catch (e) {
-      _showError('Login failed: ${e.toString()}');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _loadingProvider = '';
-        });
-      }
-    }
-  }
+//     try {
+//       await _authService.signInWithEmailPassword(
+//         _emailController.text.trim(),
+//         _passwordController.text.trim(),
+//       );
+//       await OnboardingHelper.markOnboardingAsSeen();
+//     } on FirebaseAuthException catch (e) {
+//       String message = 'Login failed';
+//       if (e.code == 'user-not-found') {
+//         message = 'No account found with this email';
+//       } else if (e.code == 'wrong-password') {
+//         message = 'Incorrect password';
+//       } else if (e.code == 'invalid-email') {
+//         message = 'Invalid email address';
+//       }
+//       _showError(message);
+//     } catch (e) {
+//       _showError('Login failed: ${e.toString()}');
+//     } finally {
+//       if (mounted) {
+//         setState(() {
+//           _isLoading = false;
+//           _loadingProvider = '';
+//         });
+//       }
+//     }
+//   }
 
   Future<void> _signInWithGoogle() async {
     setState(() {
@@ -224,163 +224,131 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
                   // Or divider
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Divider(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withAlpha(100),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'OR',
-                          style: TextStyle(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withAlpha(160),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Divider(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withAlpha(100),
-                        ),
-                      ),
-                    ],
-                  ),
+              
 
-                  const SizedBox(height: 20),
+                  // const SizedBox(height: 12),
+                  // // Email TextField
+                  // TextField(
+                  //   controller: _emailController,
+                  //   keyboardType: TextInputType.emailAddress,
+                  //   enabled: !_isLoading,
+                  //   decoration: InputDecoration(
+                  //     hintText: 'Email',
+                  //     prefixIcon: const Icon(Icons.email_outlined),
+                  //     filled: true,
+                  //     fillColor: const Color.fromARGB(78, 195, 195, 195),
+                  //     hintStyle: const TextStyle(
+                  //       color: Color.fromARGB(255, 188, 187, 187),
+                  //     ),
+                  //     border: OutlineInputBorder(
+                  //       borderRadius: BorderRadius.circular(10),
+                  //       borderSide: BorderSide.none,
+                  //     ),
+                  //   ),
+                  // ),
 
-                  const SizedBox(height: 12),
-                  // Email TextField
-                  TextField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    enabled: !_isLoading,
-                    decoration: InputDecoration(
-                      hintText: 'Email',
-                      prefixIcon: const Icon(Icons.email_outlined),
-                      filled: true,
-                      fillColor: const Color.fromARGB(78, 195, 195, 195),
-                      hintStyle: const TextStyle(
-                        color: Color.fromARGB(255, 188, 187, 187),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
+                  // const SizedBox(height: 20),
 
-                  const SizedBox(height: 20),
+                  // // Password TextField
+                  // TextField(
+                  //   controller: _passwordController,
+                  //   obscureText: _obscurePassword,
+                  //   enabled: !_isLoading,
+                  //   decoration: InputDecoration(
+                  //     hintText: 'Password',
+                  //     prefixIcon: const Icon(Icons.lock_outlined),
+                  //     suffixIcon: IconButton(
+                  //       icon: Icon(
+                  //         _obscurePassword
+                  //             ? Icons.visibility
+                  //             : Icons.visibility_off,
+                  //       ),
+                  //       onPressed: () {
+                  //         setState(() {
+                  //           _obscurePassword = !_obscurePassword;
+                  //         });
+                  //       },
+                  //     ),
+                  //     filled: true,
+                  //     fillColor: const Color.fromARGB(78, 195, 195, 195),
+                  //     hintStyle: const TextStyle(
+                  //       color: Color.fromARGB(255, 188, 187, 187),
+                  //     ),
+                  //     border: OutlineInputBorder(
+                  //       borderRadius: BorderRadius.circular(10),
+                  //       borderSide: BorderSide.none,
+                  //     ),
+                  //   ),
+                  // ),
 
-                  // Password TextField
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    enabled: !_isLoading,
-                    decoration: InputDecoration(
-                      hintText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outlined),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
-                      filled: true,
-                      fillColor: const Color.fromARGB(78, 195, 195, 195),
-                      hintStyle: const TextStyle(
-                        color: Color.fromARGB(255, 188, 187, 187),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
+                  // const SizedBox(height: 10),
 
                   // Forgot Password
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      onTap: _isLoading
-                          ? null
-                          : () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const ForgotPasswordPage(),
-                                ),
-                              );
-                            },
-                      child: Text(
-                        'Forgot Password?',
-                        style: TextStyle(
-                          color: _isLoading
-                              ? Colors.grey
-                              : const Color.fromARGB(231, 24, 60, 45),
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
+                  // Align(
+                  //   alignment: Alignment.centerRight,
+                  //   child: GestureDetector(
+                  //     onTap: _isLoading
+                  //         ? null
+                  //         : () {
+                  //             Navigator.push(
+                  //               context,
+                  //               MaterialPageRoute(
+                  //                 builder: (context) =>
+                  //                     const ForgotPasswordPage(),
+                  //               ),
+                  //             );
+                  //           },
+                  //     child: Text(
+                  //       'Forgot Password?',
+                  //       style: TextStyle(
+                  //         color: _isLoading
+                  //             ? Colors.grey
+                  //             : const Color.fromARGB(231, 24, 60, 45),
+                  //         fontSize: 14,
+                  //         fontWeight: FontWeight.bold,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
 
-                  const SizedBox(height: 25),
+                  // const SizedBox(height: 25),
 
                   // Login Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isLoading && _loadingProvider == 'email'
-                          ? null
-                          : _signInWithEmail,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E7D32),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 2,
-                      ),
-                      child: _isLoading && _loadingProvider == 'email'
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              'Login',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                  ),
+                  // SizedBox(
+                  //   width: double.infinity,
+                  //   child: ElevatedButton(
+                  //     onPressed: _isLoading && _loadingProvider == 'email'
+                  //         ? null
+                  //         : _signInWithEmail,
+                  //     style: ElevatedButton.styleFrom(
+                  //       backgroundColor: const Color(0xFF2E7D32),
+                  //       foregroundColor: Colors.white,
+                  //       padding: const EdgeInsets.symmetric(vertical: 16),
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(10),
+                  //       ),
+                  //       elevation: 2,
+                  //     ),
+                  //     child: _isLoading && _loadingProvider == 'email'
+                  //         ? const SizedBox(
+                  //             height: 20,
+                  //             width: 20,
+                  //             child: CircularProgressIndicator(
+                  //               color: Colors.white,
+                  //               strokeWidth: 2,
+                  //             ),
+                  //           )
+                  //         : const Text(
+                  //             'Login',
+                  //             style: TextStyle(
+                  //               fontSize: 16,
+                  //               fontWeight: FontWeight.bold,
+                  //             ),
+                  //           ),
+                  //   ),
+                  // ),
 
-                  const SizedBox(height: 20),
+                  // const SizedBox(height: 20),
 
                   // Apple Sign-In - Show on web and Apple platforms
                   // if (kIsWeb ||
@@ -415,35 +383,35 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 25),
 
                   // Register Link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Don\'t have an account?',
-                        style: TextStyle(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withAlpha(180),
-                          fontSize: 14,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: _isLoading ? null : widget.showRegisterScreen,
-                        child: Text(
-                          ' Register now!',
-                          style: TextStyle(
-                            color: _isLoading
-                                ? Colors.grey
-                                : const Color.fromARGB(231, 24, 60, 45),
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  // Row(
+                  //   mainAxisAlignment: MainAxisAlignment.center,
+                  //   children: [
+                  //     Text(
+                  //       'Don\'t have an account?',
+                  //       style: TextStyle(
+                  //         color: Theme.of(
+                  //           context,
+                  //         ).colorScheme.onSurface.withAlpha(180),
+                  //         fontSize: 14,
+                  //       ),
+                  //     ),
+                  //     GestureDetector(
+                  //       onTap: _isLoading ? null : widget.showRegisterScreen,
+                  //       child: Text(
+                  //         ' Register now!',
+                  //         style: TextStyle(
+                  //           color: _isLoading
+                  //               ? Colors.grey
+                  //               : const Color.fromARGB(231, 24, 60, 45),
+                  //           fontSize: 14,
+                  //           fontWeight: FontWeight.bold,
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ],
+                  // ),
 
-                  const SizedBox(height: 20),
+                  // const SizedBox(height: 20),
                 ],
               ),
             ),

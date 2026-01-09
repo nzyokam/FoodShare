@@ -579,8 +579,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               child: FadeTransition(
                 opacity: _fadeAnimation,
                 child: Container(
-                  width: 140,
-                  height: 140,
+                  width: 100,
+                  height: 100,
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
                       colors: [
@@ -629,7 +629,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 page.title,
                 style: GoogleFonts.bebasNeue(
                   color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 48,
+                  fontSize: 40,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,

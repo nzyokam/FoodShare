@@ -2,7 +2,7 @@
 
 **PROJECT BY MUUSI NGUUTU NZYOKA**
 
-[LIVE SITE](https://fooddsharee.netlify.app/)
+[LIVE SITE](https://foodshare.nzyoka.com/)
 
 A Flutter-powered mobile application designed to combat hunger and food waste in Kenya by connecting restaurants with surplus food to shelters and community organizations in need.
 
