@@ -1,12 +1,10 @@
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import '../config/app_config.dart';
 
 class ApiClient {
-  // Android emulator → 10.0.2.2:8000
-  // Physical device on same WiFi → use your machine's local IP
-  // Production → replace with your deployed backend URL
-  static const baseUrl = 'http://192.168.1.4:8000';
+  static String get baseUrl => AppConfig.apiUrl;
 
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
