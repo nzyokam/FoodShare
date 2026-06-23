@@ -1,65 +1,49 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class Shelter {
-  final String uid;
-  final String organizationName;
-  final String registrationNumber;
-  final String address;
-  final String city;
-  final String phone;
-  final int capacity;
-  final String targetDemographic;
-  final String description;
-  final GeoPoint? coordinates;
+  final String id;
+  final String? organizationName;
+  final String? registrationNumber;
+  final String? address;
+  final String? city;
+  final String? phone;
+  final int? capacity;
+  final String? targetDemographic;
+  final String? description;
   final bool isVerified;
-  final Timestamp createdAt;
+  final double? latitude;
+  final double? longitude;
+  final DateTime createdAt;
 
-  Shelter({
-    required this.uid,
-    required this.organizationName,
-    required this.registrationNumber,
-    required this.address,
-    required this.city,
-    required this.phone,
-    required this.capacity,
-    required this.targetDemographic,
-    required this.description,
-    this.coordinates,
+  const Shelter({
+    required this.id,
+    this.organizationName,
+    this.registrationNumber,
+    this.address,
+    this.city,
+    this.phone,
+    this.capacity,
+    this.targetDemographic,
+    this.description,
     this.isVerified = false,
+    this.latitude,
+    this.longitude,
     required this.createdAt,
   });
 
   factory Shelter.fromJson(Map<String, dynamic> json) {
     return Shelter(
-      uid: json['uid'] ?? '',
-      organizationName: json['organizationName'] ?? '',
-      registrationNumber: json['registrationNumber'] ?? '',
-      address: json['address'] ?? '',
-      city: json['city'] ?? '',
-      phone: json['phone'] ?? '',
-      capacity: json['capacity'] ?? 0,
-      targetDemographic: json['targetDemographic'] ?? '',
-      description: json['description'] ?? '',
-      coordinates: json['coordinates'],
-      isVerified: json['isVerified'] ?? false,
-      createdAt: json['createdAt'] ?? Timestamp.now(),
+      id: json['id'] ?? '',
+      organizationName: json['organization_name'],
+      registrationNumber: json['registration_number'],
+      address: json['address'],
+      city: json['city'],
+      phone: json['phone'],
+      capacity: json['capacity'],
+      targetDemographic: json['target_demographic'],
+      description: json['description'],
+      isVerified: json['is_verified'] ?? false,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      createdAt: DateTime.parse(json['created_at']),
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'uid': uid,
-      'organizationName': organizationName,
-      'registrationNumber': registrationNumber,
-      'address': address,
-      'city': city,
-      'phone': phone,
-      'capacity': capacity,
-      'targetDemographic': targetDemographic,
-      'description': description,
-      'coordinates': coordinates,
-      'isVerified': isVerified,
-      'createdAt': createdAt,
-    };
   }
 }

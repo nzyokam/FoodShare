@@ -1,15 +1,19 @@
-// screens/restaurant/add_donation_screen.dart
-//import 'dart:io';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-//import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:typed_data';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-//import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../../models/donation_model.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/donation_service.dart';
+import '../../services/profile_service.dart';
+
+const _kGreen    = Color(0xFF38563B);
+const _kGreenMid = Color(0xFF506F52);
 
 class AddDonationScreen extends StatefulWidget {
-  final Donation? donation; // For editing existing donations
-
+  final Donation? donation;
   const AddDonationScreen({super.key, this.donation});
 
   @override
@@ -17,47 +21,80 @@ class AddDonationScreen extends StatefulWidget {
 }
 
 class _AddDonationScreenState extends State<AddDonationScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _quantityController = TextEditingController();
-  final _unitController = TextEditingController();
+  final _formKey     = GlobalKey<FormState>();
+  final _titleCtrl   = TextEditingController();
+  final _descCtrl    = TextEditingController();
+  final _quantityCtrl = TextEditingController();
+
+  late final TapGestureRecognizer _guidelinesRecognizer;
 
   DonationCategory _selectedCategory = DonationCategory.other;
+  String _selectedUnit = 'kg';
   DateTime? _expiryDate;
   DateTime? _pickupTime;
-  // final List<File> _selectedImages = [];
-  // final List<String> _existingImageUrls = [];
-  // final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+
+  XFile?      _pickedFile;
+  Uint8List?  _imageBytes;
+  bool        _uploadingImage = false;
+  List<String> _existingImageUrls = [];
+
+  static const _units = ['kg', 'g', 'portions', 'boxes', 'litres', 'pieces', 'bags'];
 
   @override
   void initState() {
     super.initState();
-    if (widget.donation != null) {
-      _loadExistingDonation();
-    }
+    _guidelinesRecognizer = TapGestureRecognizer()
+      ..onTap = () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Community Guidelines coming soon!', style: GoogleFonts.plusJakartaSans()),
+            backgroundColor: _kGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ));
+    if (widget.donation != null) _loadExisting();
   }
 
-  void _loadExistingDonation() {
-    final donation = widget.donation!;
-    _titleController.text = donation.title;
-    _descriptionController.text = donation.description;
-    _quantityController.text = donation.quantity.toString();
-    _unitController.text = donation.unit;
-    _selectedCategory = donation.category;
-    _expiryDate = donation.expiryDate.toDate();
-    _pickupTime = donation.pickupTime.toDate();
-    //_existingImageUrls.addAll(donation.imageUrls);
+  void _loadExisting() {
+    final d = widget.donation!;
+    _titleCtrl.text    = d.title;
+    _descCtrl.text     = d.description ?? '';
+    _quantityCtrl.text = d.quantity?.toString() ?? '';
+    _selectedUnit      = d.unit ?? 'kg';
+    _selectedCategory  = d.category ?? DonationCategory.other;
+    _expiryDate        = d.expiryDate;
+    _pickupTime        = d.pickupTime;
+    _existingImageUrls = List<String>.from(d.imageUrls);
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _quantityController.dispose();
-    _unitController.dispose();
+    _guidelinesRecognizer.dispose();
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    _quantityCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1200, maxHeight: 1200, imageQuality: 85,
+    );
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    if (!mounted) return;
+    setState(() { _pickedFile = picked; _imageBytes = bytes; });
+  }
+
+  Future<List<String>> _uploadImageIfNeeded() async {
+    if (_imageBytes == null || _pickedFile == null) return _existingImageUrls;
+    setState(() => _uploadingImage = true);
+    try {
+      final url = await DonationService.uploadImage(_imageBytes!, _pickedFile!.name);
+      return [url];
+    } finally {
+      if (mounted) setState(() => _uploadingImage = false);
+    }
   }
 
   Future<void> _pickDateTime(bool isExpiry) async {
@@ -67,418 +104,379 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 30)),
     );
-
-    if (date != null) {
-      final time = await showTimePicker(
-        context: context,
-        initialTime: const TimeOfDay(hour: 12, minute: 0),
-      );
-
-      if (time != null) {
-        final dateTime = DateTime(
-          date.year,
-          date.month,
-          date.day,
-          time.hour,
-          time.minute,
-        );
-
-        setState(() {
-          if (isExpiry) {
-            _expiryDate = dateTime;
-          } else {
-            _pickupTime = dateTime;
-          }
-        });
-      }
-    }
-  }
-
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 12, minute: 0),
     );
+    if (time == null) return;
+    final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    setState(() => isExpiry ? _expiryDate = dt : _pickupTime = dt);
   }
-  // Replace your _saveDonation method to work without images:
-  
+
+  String _categoryToApi(DonationCategory cat) =>
+      cat == DonationCategory.preparedMeals ? 'prepared_meals' : cat.name;
+
   Future<void> _saveDonation() async {
     if (!_formKey.currentState!.validate()) return;
-    
     if (_expiryDate == null || _pickupTime == null) {
       _showError('Please set both expiry date and pickup time');
       return;
     }
-
+    if (_imageBytes == null && _existingImageUrls.isEmpty) {
+      _showError('Please add a photo of the donation');
+      return;
+    }
     setState(() => _isLoading = true);
-
     try {
-      final user = FirebaseAuth.instance.currentUser!;
-      
-      // Get restaurant city
-      final restaurantDoc = await FirebaseFirestore.instance
-          .collection('restaurants')
-          .doc(user.uid)
-          .get();
-      final city = restaurantDoc.data()?['city'] ?? '';
-
-      // For now, we'll save donations without images
-      // You can add placeholder image URLs or leave empty
-      final donationData = {
-        'donorId': user.uid,
-        'title': _titleController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'category': _selectedCategory.toString().split('.').last,
-        'quantity': int.parse(_quantityController.text),
-        'unit': _unitController.text.trim(),
-        'expiryDate': Timestamp.fromDate(_expiryDate!),
-        'pickupTime': Timestamp.fromDate(_pickupTime!),
-        'imageUrls': [], // Empty array for now
-        'status': 'available',
-        'city': city,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
+      String? city;
+      final userId = context.read<AuthProvider>().user?.id;
+      if (userId != null) {
+        final restaurant = await ProfileService.getRestaurant(userId);
+        city = restaurant?.city;
+      }
+      final imageUrls = await _uploadImageIfNeeded();
 
       if (widget.donation != null) {
-        // Update existing donation
-        await FirebaseFirestore.instance
-            .collection('donations')
-            .doc(widget.donation!.id)
-            .update(donationData);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Donation updated successfully! (Images will be available after upgrading Firebase plan)'),
-            backgroundColor: Colors.green,
-          ),
+        await DonationService.updateDonation(
+          widget.donation!.id,
+          title: _titleCtrl.text.trim(),
+          description: _descCtrl.text.trim(),
+          category: _categoryToApi(_selectedCategory),
+          quantity: int.tryParse(_quantityCtrl.text),
+          unit: _selectedUnit,
+          expiryDate: _expiryDate,
+          pickupTime: _pickupTime,
+          imageUrls: imageUrls,
+          city: city,
         );
+        if (mounted) _showSuccess('Donation updated!');
       } else {
-        // Create new donation
-        await FirebaseFirestore.instance
-            .collection('donations')
-            .add(donationData);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Donation added successfully! (Images will be available after upgrading Firebase plan)'),
-            backgroundColor: Colors.green,
-          ),
+        await DonationService.createDonation(
+          title: _titleCtrl.text.trim(),
+          description: _descCtrl.text.trim(),
+          category: _categoryToApi(_selectedCategory),
+          quantity: int.tryParse(_quantityCtrl.text),
+          unit: _selectedUnit,
+          expiryDate: _expiryDate,
+          pickupTime: _pickupTime,
+          imageUrls: imageUrls,
+          city: city,
         );
+        if (mounted) _showSuccess('Donation added!');
       }
-
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
     } catch (e) {
-      _showError('Error saving donation: $e');
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      _showError(msg);
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  void _showError(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content: Text(msg, style: GoogleFonts.plusJakartaSans()),
+    backgroundColor: const Color(0xFFBA1A1A),
+    behavior: SnackBarBehavior.floating,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  ));
 
+  void _showSuccess(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content: Text(msg, style: GoogleFonts.plusJakartaSans()),
+    backgroundColor: _kGreen,
+    behavior: SnackBarBehavior.floating,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  ));
 
   @override
   Widget build(BuildContext context) {
+    final cs    = Theme.of(context).colorScheme;
+    final isEdit = widget.donation != null;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: cs.surface,
         elevation: 0,
-        title: Text(
-          widget.donation != null ? 'Edit Donation' : 'Add Donation',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Icon(Icons.close_rounded, color: cs.onSurface),
         ),
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _saveDonation,
-            child: Text(
-              widget.donation != null ? 'Update' : 'Save',
-              style: const TextStyle(
-                color: Color(0xFF2E7D32),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
+        title: Row(children: [Image.asset('lib/assets/transparent.png', width: 32, height: 32), const SizedBox(width: 10), Text(isEdit ? 'Edit Donation' : 'Add New Donation', style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.w700, color: cs.onSurface))]),
       ),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title
-              _buildTextField(
-                controller: _titleController,
-                label: 'Food Item Title *',
-                hint: 'e.g., Fresh Vegetables, Prepared Meals',
-                 color: const Color.fromARGB(255, 188, 187, 187),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Title is required';
-                  }
-                  return null;
-                },
-              ),
-              
-              const SizedBox(height: 20),
-              
-              // Category
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Category *',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(context).colorScheme.onSurface,
+              // ── Photo upload ──────────────────────────────────────────────
+              GestureDetector(
+                onTap: _isLoading ? null : _pickImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainer,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _imageBytes != null ? cs.primary : cs.outlineVariant,
+                      width: _imageBytes != null ? 2 : 1.5,
                     ),
                   ),
+                  clipBehavior: Clip.antiAlias,
+                  child: _imageBytes != null
+                      ? Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.memory(_imageBytes!, fit: BoxFit.cover),
+                            Positioned(
+                              top: 8, right: 8,
+                              child: GestureDetector(
+                                onTap: () => setState(() { _pickedFile = null; _imageBytes = null; }),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+                                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 16),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 8, right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12)),
+                                child: Text('Tap to change', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w500)),
+                              ),
+                            ),
+                            if (_uploadingImage)
+                              const ColoredBox(
+                                color: Color(0x88000000),
+                                child: Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
+                              ),
+                          ],
+                        )
+                      : (_existingImageUrls.isNotEmpty
+                          ? Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.network(
+                                  _existingImageUrls.first,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Icon(Icons.broken_image_outlined, size: 40, color: cs.outlineVariant),
+                                ),
+                                Positioned(
+                                  top: 8, right: 8,
+                                  child: GestureDetector(
+                                    onTap: () => setState(() => _existingImageUrls = []),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+                                      child: const Icon(Icons.close_rounded, color: Colors.white, size: 16),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 8, right: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12)),
+                                    child: Text('Tap to change', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w500)),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_a_photo_outlined, size: 32, color: cs.outlineVariant),
+                                const SizedBox(height: 10),
+                                Text('Tap to add photo', style: GoogleFonts.plusJakartaSans(fontSize: 14, color: cs.onSurfaceVariant)),
+                                const SizedBox(height: 4),
+                                Text('Required — JPEG or PNG', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: const Color(0xFFBA1A1A))),
+                              ],
+                            )),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ── Card 1: Food details ──────────────────────────────────────
+              _Card(
+                children: [
+                  const _FieldLabel('Donation Title'),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _titleCtrl,
+                    style: GoogleFonts.plusJakartaSans(fontSize: 14, color: cs.onSurface),
+                    validator: (v) => (v?.trim().isEmpty ?? true) ? 'Title is required' : null,
+                    decoration: _inputDeco('e.g. Surplus Fresh Apples', cs),
+                  ),
+                  const SizedBox(height: 16),
+
+                  const _FieldLabel('Category'),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<DonationCategory>(
-                    value: _selectedCategory,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Theme.of(context).colorScheme.primary.withAlpha(20),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                    initialValue: _selectedCategory,
+                    style: GoogleFonts.plusJakartaSans(fontSize: 14, color: cs.onSurface),
+                    decoration: _inputDeco('', cs),
+                    dropdownColor: cs.surfaceContainer,
+                    items: DonationCategory.values
+                        .map((c) => DropdownMenuItem(value: c, child: Text(_categoryName(c), style: GoogleFonts.plusJakartaSans(fontSize: 14, color: cs.onSurface))))
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedCategory = v!),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 5,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _FieldLabel('Quantity'),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _quantityCtrl,
+                              keyboardType: TextInputType.number,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 14, color: cs.onSurface),
+                              decoration: _inputDeco('0', cs),
+                              validator: (v) {
+                                if (v?.trim().isEmpty ?? true) return 'Required';
+                                if (int.tryParse(v!) == null || int.parse(v) <= 0) return 'Invalid';
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    items: DonationCategory.values.map((category) {
-                      return DropdownMenuItem(
-                        value: category,
-                        child: Text(_getCategoryName(category)),
-                      );
-                    }).toList(),
-                    onChanged: (value) => setState(() => _selectedCategory = value!),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 4,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _FieldLabel('Unit'),
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String>(
+                              initialValue: _selectedUnit,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 14, color: cs.onSurface),
+                              decoration: _inputDeco('', cs),
+                              dropdownColor: cs.surfaceContainer,
+                              items: _units
+                                  .map((u) => DropdownMenuItem(value: u, child: Text(u, style: GoogleFonts.plusJakartaSans(fontSize: 14, color: cs.onSurface))))
+                                  .toList(),
+                              onChanged: (v) => setState(() => _selectedUnit = v ?? 'kg'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  const _FieldLabel('Description'),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _descCtrl,
+                    maxLines: 4,
+                    style: GoogleFonts.plusJakartaSans(fontSize: 14, color: cs.onSurface),
+                    validator: (v) => (v?.trim().isEmpty ?? true) ? 'Description is required' : null,
+                    decoration: _inputDeco('Add details about the condition, variety, etc.', cs),
                   ),
                 ],
               ),
-              
-              const SizedBox(height: 20),
-              
-              // Quantity and Unit
-              Row(
+              const SizedBox(height: 16),
+
+              // ── Card 2: Time & location ───────────────────────────────────
+              _Card(
                 children: [
-                  Expanded(
-                    flex: 2,
-                    child: _buildTextField(
-                      controller: _quantityController,
-                      label: 'Quantity *',
-                      hint: '10',
-                       color: const Color.fromARGB(255, 141, 141, 141),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Quantity is required';
-                        }
-                        if (int.tryParse(value) == null || int.parse(value) <= 0) {
-                          return 'Invalid quantity';
-                        }
-                        return null;
-                      },
-                    ),
+                  const _FieldLabel('Expiry Date & Time'),
+                  const SizedBox(height: 8),
+                  _DateField(
+                    placeholder: 'Select Expiry',
+                    value: _expiryDate,
+                    icon: Icons.calendar_today_outlined,
+                    onTap: () => _pickDateTime(true),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 3,
-                    child: _buildTextField(
-                      controller: _unitController,
-                      label: 'Unit *',
-                      hint: 'kg, portions, boxes',
-                       color: const Color.fromARGB(255, 188, 187, 187),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Unit is required';
-                        }
-                        return null;
-                      },
-                    ),
+                  const SizedBox(height: 16),
+
+                  const _FieldLabel('Preferred Pickup Time'),
+                  const SizedBox(height: 8),
+                  _DateField(
+                    placeholder: 'Select Time Window',
+                    value: _pickupTime,
+                    icon: Icons.access_time_rounded,
+                    onTap: () => _pickDateTime(false),
                   ),
                 ],
               ),
-              
-              const SizedBox(height: 20),
-              
-              // Description
-              _buildTextField(
-                controller: _descriptionController,
-                label: 'Description *',
-                hint: 'Describe the food items, freshness, any special instructions...',
-                 color: const Color.fromARGB(255, 188, 187, 187),
-                maxLines: 4,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Description is required';
-                  }
-                  return null;
-                },
-              ),
-              
-              const SizedBox(height: 20),
-              
-              // Date and Time Selection
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildDateTimeCard(
-                      'Expiry Date & Time *',
-                      _expiryDate,
-                      () => _pickDateTime(true),
-                      Icons.schedule,
-                      Colors.red,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildDateTimeCard(
-                      'Pickup Time *',
-                      _pickupTime,
-                      () => _pickDateTime(false),
-                      Icons.access_time,
-                      Colors.blue,
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 20),
-              
-         
-              
-              // Save Button
-              if (_isLoading)
-                const Center(child: CircularProgressIndicator())
-              else
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _saveDonation,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E7D32),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 2,
-                    ),
-                    child: Text(
-                      widget.donation != null ? 'Update Donation' : 'Add Donation',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              
-              const SizedBox(height: 20),
+              const SizedBox(height: 32),
             ],
           ),
         ),
       ),
-    );
-  }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    int maxLines = 1,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator, required Color color,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          validator: validator,
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: Theme.of(context).colorScheme.primary.withAlpha(20),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red, width: 1),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDateTimeCard(
-    String title,
-    DateTime? dateTime,
-    VoidCallback onTap,
-    IconData icon,
-    Color color,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
+      // ── Save button ─────────────────────────────────────────────────────────
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         decoration: BoxDecoration(
-          color: color.withAlpha(30),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withAlpha(100)),
+          color: cs.surface,
+          border: Border(top: BorderSide(color: cs.outlineVariant, width: 0.5)),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _saveDonation,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kGreenMid,
+                  foregroundColor: Colors.white,
+                  shape: const StadiumBorder(),
+                  elevation: 0,
+                  disabledBackgroundColor: cs.surfaceContainerHighest,
+                ),
+                child: _isLoading
+                    ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.favorite_rounded, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            isEdit ? 'Update Donation' : 'Save Donation',
+                            style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text.rich(
+              TextSpan(
+                text: 'By saving, you agree to our ',
+                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: cs.onSurfaceVariant),
+                children: [
+                  TextSpan(
+                    text: 'Community Guidelines',
+                    recognizer: _guidelinesRecognizer,
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Theme.of(context).colorScheme.onSurface,
+                      color: cs.primary,
+                      decoration: TextDecoration.underline,
+                      decorationColor: cs.primary,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              dateTime != null
-                  ? '${dateTime.day}/${dateTime.month}/${dateTime.year}\n${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}'
-                  : 'Tap to select',
-              style: TextStyle(
-                fontSize: 12,
-                color: dateTime != null
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).colorScheme.onSurface.withAlpha(160),
+                  const TextSpan(text: '.'),
+                ],
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -486,26 +484,100 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
     );
   }
 
-  String _getCategoryName(DonationCategory category) {
-    switch (category) {
-      case DonationCategory.fruits:
-        return 'Fruits';
-      case DonationCategory.vegetables:
-        return 'Vegetables';
-      case DonationCategory.grains:
-        return 'Grains & Cereals';
-      case DonationCategory.dairy:
-        return 'Dairy Products';
-      case DonationCategory.meat:
-        return 'Meat & Fish';
-      case DonationCategory.preparedMeals:
-        return 'Prepared Meals';
-      case DonationCategory.snacks:
-        return 'Snacks';
-      case DonationCategory.beverages:
-        return 'Beverages';
-      case DonationCategory.other:
-        return 'Other';
+  InputDecoration _inputDeco(String hint, ColorScheme cs) => InputDecoration(
+    hintText: hint,
+    hintStyle: GoogleFonts.plusJakartaSans(fontSize: 13, color: cs.onSurfaceVariant),
+    filled: true,
+    fillColor: cs.surfaceContainer,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    border:        OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.outlineVariant, width: 0.5)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.outlineVariant, width: 0.5)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _kGreen, width: 2)),
+    errorBorder:   OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFBA1A1A))),
+  );
+
+  String _categoryName(DonationCategory c) {
+    switch (c) {
+      case DonationCategory.fruits:        return 'Fruits';
+      case DonationCategory.vegetables:    return 'Vegetables';
+      case DonationCategory.grains:        return 'Grains & Cereals';
+      case DonationCategory.dairy:         return 'Dairy Products';
+      case DonationCategory.meat:          return 'Meat & Fish';
+      case DonationCategory.preparedMeals: return 'Prepared Meals';
+      case DonationCategory.snacks:        return 'Snacks';
+      case DonationCategory.beverages:     return 'Beverages';
+      case DonationCategory.other:         return 'Other';
     }
+  }
+}
+
+// ── Reusable form widgets ──────────────────────────────────────────────────────
+
+class _Card extends StatelessWidget {
+  final List<Widget> children;
+  const _Card({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainer,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant, width: 0.5),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+    );
+  }
+}
+
+class _FieldLabel extends StatelessWidget {
+  final String text;
+  const _FieldLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Text(text, style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w700, color: cs.onSurface));
+  }
+}
+
+class _DateField extends StatelessWidget {
+  final String    placeholder;
+  final DateTime? value;
+  final IconData  icon;
+  final VoidCallback onTap;
+  const _DateField({required this.placeholder, required this.value, required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs       = Theme.of(context).colorScheme;
+    final hasValue = value != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainer,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.outlineVariant, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                hasValue
+                    ? '${value!.day}/${value!.month}/${value!.year}  ${value!.hour.toString().padLeft(2, '0')}:${value!.minute.toString().padLeft(2, '0')}'
+                    : placeholder,
+                style: GoogleFonts.plusJakartaSans(fontSize: 14, color: hasValue ? cs.onSurface : cs.onSurfaceVariant),
+              ),
+            ),
+            Icon(icon, size: 18, color: cs.onSurfaceVariant),
+          ],
+        ),
+      ),
+    );
   }
 }

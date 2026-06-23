@@ -1,52 +1,41 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-enum RequestStatus { pending, approved, declined }
+enum RequestStatus { pending, approved, declined, completed }
 
 class DonationRequest {
-  final String? id;
+  final String id;
   final String shelterId;
   final String donationId;
-  final String message;
+  final String? message;
   final RequestStatus status;
-  final Timestamp createdAt;
-  final Timestamp? respondedAt;
+  final DateTime createdAt;
+  final DateTime? respondedAt;
 
-  DonationRequest({
-    this.id,
+  const DonationRequest({
+    required this.id,
     required this.shelterId,
     required this.donationId,
-    required this.message,
-    this.status = RequestStatus.pending,
+    this.message,
+    required this.status,
     required this.createdAt,
     this.respondedAt,
   });
 
-  factory DonationRequest.fromJson(Map<String, dynamic> json, {String? docId}) {
+  factory DonationRequest.fromJson(Map<String, dynamic> json) {
     return DonationRequest(
-      id: docId ?? json['id'],
-      shelterId: json['shelterId'] ?? '',
-      donationId: json['donationId'] ?? '',
-      message: json['message'] ?? '',
+      id: json['id'] ?? '',
+      shelterId: json['shelter_id'] ?? '',
+      donationId: json['donation_id'] ?? '',
+      message: json['message'],
       status: _statusFromString(json['status']),
-      createdAt: json['createdAt'] ?? Timestamp.now(),
-      respondedAt: json['respondedAt'],
+      createdAt: DateTime.parse(json['created_at']),
+      respondedAt: json['responded_at'] != null
+          ? DateTime.parse(json['responded_at'])
+          : null,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'shelterId': shelterId,
-      'donationId': donationId,
-      'message': message,
-      'status': status.toString().split('.').last,
-      'createdAt': createdAt,
-      'respondedAt': respondedAt,
-    };
-  }
-
-  static RequestStatus _statusFromString(String? statusString) {
+  static RequestStatus _statusFromString(String? s) {
     return RequestStatus.values.firstWhere(
-      (s) => s.toString().split('.').last == statusString,
+      (st) => st.name == s,
       orElse: () => RequestStatus.pending,
     );
   }

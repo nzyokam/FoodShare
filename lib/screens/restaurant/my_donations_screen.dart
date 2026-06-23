@@ -1,10 +1,15 @@
-// screens/restaurant/my_donations_screen.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../models/chat_model.dart';
 import '../../models/donation_model.dart';
-import 'add_donation_screen.dart';
+import '../../services/chat_service.dart';
+import '../../services/donation_service.dart';
+import '../../widgets/app_logo.dart';
 import '../shelter/chat_screen.dart';
+import 'add_donation_screen.dart';
+
+const _kGreen    = Color(0xFF38563B);
+const _kGreenMid = Color(0xFF506F52);
 
 class MyDonationsScreen extends StatefulWidget {
   const MyDonationsScreen({super.key});
@@ -14,13 +19,15 @@ class MyDonationsScreen extends StatefulWidget {
 }
 
 class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProviderStateMixin {
-  final AuthService _authService = AuthService();
   late TabController _tabController;
+  List<Donation> _all = [];
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _loadDonations();
   }
 
   @override
@@ -29,689 +36,451 @@ class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProvid
     super.dispose();
   }
 
- Stream<List<Donation>> _getMyDonationsStream(DonationStatus? status) {
-  final user = _authService.currentUser!;
-  
-  if (status == null) {
-    // All donations - simple query
-    return FirebaseFirestore.instance
-        .collection('donations')
-        .where('donorId', isEqualTo: user.uid)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Donation.fromJson(doc.data(), docId: doc.id))
-            .toList());
-  } else {
-    // Specific status - you'll need an index for donorId + status + createdAt
-    return FirebaseFirestore.instance
-        .collection('donations')
-        .where('donorId', isEqualTo: user.uid)
-        .where('status', isEqualTo: status.toString().split('.').last)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Donation.fromJson(doc.data(), docId: doc.id))
-            .toList());
+  Future<void> _loadDonations() async {
+    setState(() => _loading = true);
+    try {
+      final result = await DonationService.myDonations();
+      if (mounted) setState(() { _all = result; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
   }
-}
+
+  List<Donation> _filtered(DonationStatus? status) =>
+      status == null ? _all : _all.where((d) => d.status == status).toList();
 
   Future<void> _deleteDonation(Donation donation) async {
-    try {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Delete Donation'),
-          content: const Text(
-            'Are you sure you want to delete this donation? This action cannot be undone.',
+    final cs = Theme.of(context).colorScheme;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: cs.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Delete Donation', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, color: cs.onSurface)),
+        content: Text('Are you sure you want to delete this donation? This cannot be undone.', style: GoogleFonts.plusJakartaSans(color: cs.onSurfaceVariant)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: GoogleFonts.plusJakartaSans(color: cs.onSurfaceVariant))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFBA1A1A), foregroundColor: Colors.white, shape: const StadiumBorder(), elevation: 0),
+            child: Text('Delete', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-      );
-
-      if (confirmed != true) return;
-
-      // Delete associated requests first
-      final requestsSnapshot = await FirebaseFirestore.instance
-          .collection('requests')
-          .where('donationId', isEqualTo: donation.id)
-          .get();
-
-      for (var requestDoc in requestsSnapshot.docs) {
-        await requestDoc.reference.delete();
-      }
-
-      // Delete the donation
-      await FirebaseFirestore.instance
-          .collection('donations')
-          .doc(donation.id)
-          .delete();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Donation deleted successfully')),
-      );
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await DonationService.deleteDonation(donation.id);
+      await _loadDonations();
+      if (mounted) _showSnack('Donation deleted', isError: false);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error deleting donation: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) _showSnack('Error: $e', isError: true);
     }
   }
 
-  Future<void> _toggleDonationStatus(Donation donation) async {
+  Future<void> _updateStatus(Donation donation, String newStatus) async {
     try {
-      final newStatus = donation.status == DonationStatus.available 
-          ? 'cancelled' 
-          : 'available';
-
-      await FirebaseFirestore.instance
-          .collection('donations')
-          .doc(donation.id)
-          .update({
-        'status': newStatus,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            newStatus == 'cancelled' 
-                ? 'Donation cancelled' 
-                : 'Donation reactivated',
-          ),
-        ),
-      );
+      await DonationService.updateDonation(donation.id, status: newStatus);
+      await _loadDonations();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error updating donation: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) _showSnack('Error: $e', isError: true);
     }
+  }
+
+  Future<void> _openChat(Donation donation) async {
+    try {
+      final chats = await ChatService.listChats();
+      Chat? chat;
+      try { chat = chats.firstWhere((c) => c.donationId == donation.id); } catch (_) {}
+      if (!mounted) return;
+      if (chat == null) { _showSnack('No conversation started yet', isError: false); return; }
+      Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(chatId: chat!.id, title: 'Shelter Chat', donationTitle: donation.title)));
+    } catch (e) {
+      if (mounted) _showSnack('Error: $e', isError: true);
+    }
+  }
+
+  void _showSnack(String msg, {required bool isError}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg, style: GoogleFonts.plusJakartaSans()),
+      backgroundColor: isError ? const Color(0xFFBA1A1A) : _kGreen,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: cs.surface,
         elevation: 0,
-        title: const Text('My Donations'),
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: cs.onSurface),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Row(children: [Image.asset('lib/assets/transparent.png', width: 32, height: 32), const SizedBox(width: 10), Text('My Donations', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w700, color: cs.onSurface))]),
         actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddDonationScreen()),
-              );
-            },
-            icon: const Icon(Icons.add),
-            tooltip: 'Add Donation',
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: () async {
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddDonationScreen()));
+                _loadDonations();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(color: _kGreenMid, borderRadius: BorderRadius.circular(20)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.add_rounded, color: Colors.white, size: 16),
+                    const SizedBox(width: 4),
+                    Text('Add New', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: const [
-            Tab(text: 'All'),
-            Tab(text: 'Available'),
-            Tab(text: 'Reserved'),
-            Tab(text: 'Completed'),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildDonationsList(null),
-          _buildDonationsList(DonationStatus.available),
-          _buildDonationsList(DonationStatus.reserved),
-          _buildDonationsList(DonationStatus.completed),
+          // ── Tabs ─────────────────────────────────────────────────────────────
+          Container(
+            margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(color: cs.surfaceContainer, borderRadius: BorderRadius.circular(12)),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                color: cs.surface,
+                borderRadius: BorderRadius.circular(9),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))],
+              ),
+              dividerColor: Colors.transparent,
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: cs.onSurface,
+              unselectedLabelColor: cs.onSurfaceVariant,
+              labelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13),
+              unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w400, fontSize: 13),
+              tabs: const [Tab(text: 'All'), Tab(text: 'Available'), Tab(text: 'Reserved'), Tab(text: 'Done')],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ── List ─────────────────────────────────────────────────────────────
+          Expanded(
+            child: _loading
+                ? Center(child: CircularProgressIndicator(color: cs.primary))
+                : RefreshIndicator(
+                    color: cs.primary,
+                    onRefresh: _loadDonations,
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _donationsList(null),
+                        _donationsList(DonationStatus.available),
+                        _donationsList(DonationStatus.reserved),
+                        _donationsList(DonationStatus.completed),
+                      ],
+                    ),
+                  ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDonationsList(DonationStatus? status) {
-    return StreamBuilder<List<Donation>>(
-      stream: _getMyDonationsStream(status),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(
-            child: Text('Error loading donations: ${snapshot.error}'),
-          );
-        }
-
-        final donations = snapshot.data ?? [];
-
-        if (donations.isEmpty) {
-          return Center(
+  Widget _donationsList(DonationStatus? status) {
+    final cs = Theme.of(context).colorScheme;
+    final donations = _filtered(status);
+    if (donations.isEmpty) {
+      // "Done" tab gets an instructional placeholder — no Add button
+      if (status == DonationStatus.completed) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.restaurant_outlined,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary.withAlpha(100),
+                Container(
+                  width: 72, height: 72,
+                  decoration: BoxDecoration(color: cs.secondaryContainer, shape: BoxShape.circle),
+                  child: Icon(Icons.check_circle_outline_rounded, color: cs.primary, size: 36),
                 ),
                 const SizedBox(height: 16),
+                Text('No completed donations', style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.w700, color: cs.onSurface)),
+                const SizedBox(height: 12),
                 Text(
-                  'No donations found',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  status == null 
-                      ? 'Your donations will appear here'
-                      : 'No ${status.toString().split('.').last} donations',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
-                  ),
+                  'Move items to this section from the reserved section by marking them as done when delivery is completed.',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 13, color: cs.onSurfaceVariant, height: 1.6),
                   textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AddDonationScreen()),
-                    );
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Your First Donation'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E7D32),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
                 ),
               ],
             ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: donations.length,
-          itemBuilder: (context, index) {
-            final donation = donations[index];
-            return _buildDonationCard(donation);
-          },
+          ),
         );
-      },
+      }
+
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 72, height: 72,
+              decoration: BoxDecoration(color: cs.secondaryContainer, shape: BoxShape.circle),
+              child: const AppLogo(width: 36, height: 36),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              status == null ? 'No donations yet' : 'No ${status.name} donations',
+              style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.w700, color: cs.onSurface),
+            ),
+            const SizedBox(height: 24),
+            GestureDetector(
+              onTap: () async {
+                await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddDonationScreen()));
+                _loadDonations();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(color: _kGreenMid, borderRadius: BorderRadius.circular(24)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 6),
+                  Text('Add Donation', style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                ]),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: donations.length,
+      itemBuilder: (_, i) => _donationCard(donations[i]),
     );
   }
 
-  Widget _buildDonationCard(Donation donation) {
+  Widget _donationCard(Donation d) {
+    final cs = Theme.of(context).colorScheme;
     final now = DateTime.now();
-    final expiryDate = donation.expiryDate.toDate();
-    final isExpired = expiryDate.isBefore(now);
-    final isExpiringSoon = !isExpired && expiryDate.difference(now).inHours < 24;
+    final expiry = d.expiryDate;
+    final isExpired = expiry != null && expiry.isBefore(now);
+    final isExpiringSoon = expiry != null && !isExpired && expiry.difference(now).inHours < 24;
 
-    return Card(
+    const statusColors = {
+      DonationStatus.available:  Color(0xFF38563B),
+      DonationStatus.reserved:   Color(0xFFB45309),
+      DonationStatus.completed:  Color(0xFF1D4ED8),
+      DonationStatus.cancelled:  Color(0xFFBA1A1A),
+    };
+    const statusBg = {
+      DonationStatus.available:  Color(0xFFD6E3D3),
+      DonationStatus.reserved:   Color(0xFFFEF3C7),
+      DonationStatus.completed:  Color(0xFFDBEAFE),
+      DonationStatus.cancelled:  Color(0xFFFFE4E6),
+    };
+
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: isExpiringSoon && donation.status == DonationStatus.available
-            ? const BorderSide(color: Colors.orange, width: 2)
-            : isExpired
-                ? const BorderSide(color: Colors.red, width: 2)
-                : BorderSide.none,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainer,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isExpired ? const Color(0xFFBA1A1A).withValues(alpha: 0.4) : cs.outlineVariant,
+          width: isExpired ? 1.5 : 0.5,
+        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with Status
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    donation.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(donation.status).withAlpha(20),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    donation.status.toString().split('.').last.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: _getStatusColor(donation.status),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 12),
-            
-            // Donation Details
-            Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: donation.imageUrls.isNotEmpty
-                      ? Image.network(
-                          donation.imageUrls.first,
-                          width: 80,
-                          height: 80,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 80,
-                              height: 80,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.fastfood, size: 30),
-                            );
-                          },
-                        )
-                      : Container(
-                          width: 80,
-                          height: 80,
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.fastfood, size: 30),
-                        ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${donation.quantity} ${donation.unit}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getCategoryColor(donation.category).withAlpha(20),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _getCategoryName(donation.category),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _getCategoryColor(donation.category),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (donation.description.isNotEmpty)
-                        Text(
-                          donation.description,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Time Information
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isExpired
-                    ? Colors.red.withAlpha(20)
-                    : isExpiringSoon
-                        ? Colors.orange.withAlpha(20)
-                        : Theme.of(context).colorScheme.primary.withAlpha(10),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isExpired
-                      ? Colors.red.withAlpha(100)
-                      : isExpiringSoon
-                          ? Colors.orange.withAlpha(100)
-                          : Theme.of(context).colorScheme.primary.withAlpha(50),
+      clipBehavior: Clip.hardEdge,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image
+          SizedBox(
+            height: 140, width: double.infinity,
+            child: Stack(fit: StackFit.expand, children: [
+              if (d.imageUrls.isNotEmpty)
+                Image.network(d.imageUrls.first, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _placeholder(cs))
+              else
+                _placeholder(cs),
+              Positioned(
+                top: 10, right: 10,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(color: statusBg[d.status] ?? Colors.grey[100], borderRadius: BorderRadius.circular(20)),
+                  child: Text(d.status.name.toUpperCase(), style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: statusColors[d.status] ?? Colors.grey)),
                 ),
               ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time,
-                        size: 16,
-                        color: isExpired || isExpiringSoon ? 
-                            (isExpired ? Colors.red : Colors.orange) : 
-                            const Color.fromARGB(255, 183, 160, 160),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Expires: ${expiryDate.day}/${expiryDate.month} at ${expiryDate.hour.toString().padLeft(2, '0')}:${expiryDate.minute.toString().padLeft(2, '0')}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isExpired || isExpiringSoon ? 
-                              (isExpired ? Colors.red : Colors.orange) : 
-                              const Color.fromARGB(255, 199, 199, 199),
-                          fontWeight: isExpired || isExpiringSoon ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                      ),
-                      if (isExpired) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'EXPIRED',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ] else if (isExpiringSoon && donation.status == DonationStatus.available) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.orange,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'URGENT',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.schedule,
-                        size: 16,
-                        color: Color.fromARGB(255, 183, 160, 160),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Pickup: ${donation.pickupTime.toDate().day}/${donation.pickupTime.toDate().month} at ${donation.pickupTime.toDate().hour.toString().padLeft(2, '0')}:${donation.pickupTime.toDate().minute.toString().padLeft(2, '0')}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color.fromARGB(255, 199, 199, 199),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today,
-                        size: 16,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Created: ${_formatDate(donation.createdAt.toDate())}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color.fromARGB(255, 199, 199, 199),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (donation.reservedAt != null) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.bookmark,
-                          size: 16,
-                          color: Colors.orange[600],
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Reserved: ${_formatDate(donation.reservedAt!.toDate())}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.orange[600],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
+            ]),
+          ),
+
+          // Details
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(d.title, style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w700, color: cs.onSurface)),
+                const SizedBox(height: 8),
+                Row(children: [
+                  if (d.quantity != null || d.unit != null) ...[
+                    Icon(Icons.scale_rounded, size: 14, color: cs.onSurfaceVariant),
+                    const SizedBox(width: 4),
+                    Text('${d.quantity ?? ''} ${d.unit ?? ''}'.trim(), style: GoogleFonts.plusJakartaSans(fontSize: 13, color: cs.onSurfaceVariant, fontWeight: FontWeight.w500)),
+                    const SizedBox(width: 12),
                   ],
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Action Buttons
-            Row(
-              children: [
-                // Edit Button (only for available donations)
-                if (donation.status == DonationStatus.available) ...[
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AddDonationScreen(donation: donation),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.edit, size: 18),
-                      label: const Text('Edit'),
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
+                  if (expiry != null) ...[
+                    Icon(Icons.calendar_today_outlined, size: 14, color: isExpired || isExpiringSoon ? const Color(0xFFBA1A1A) : cs.onSurfaceVariant),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Exp: ${expiry.day}/${expiry.month}/${expiry.year}',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 13, color: isExpired || isExpiringSoon ? const Color(0xFFBA1A1A) : cs.onSurfaceVariant, fontWeight: isExpired || isExpiringSoon ? FontWeight.w600 : FontWeight.w400),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                
-                // Chat Button (if reserved or completed)
-                if (donation.status == DonationStatus.reserved || 
-                    donation.status == DonationStatus.completed) ...[
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ChatScreen(donation: donation),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.chat, size: 18),
-                      label: const Text('Chat'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E7D32),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                
-                // Status Toggle Button
-                if (donation.status == DonationStatus.available || 
-                    donation.status == DonationStatus.cancelled) ...[
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _toggleDonationStatus(donation),
-                      icon: Icon(
-                        donation.status == DonationStatus.available 
-                            ? Icons.pause 
-                            : Icons.play_arrow,
-                        size: 18,
-                      ),
-                      label: Text(
-                        donation.status == DonationStatus.available 
-                            ? 'Pause' 
-                            : 'Reactivate',
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: donation.status == DonationStatus.available 
-                            ? Colors.orange 
-                            : Colors.green,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                
-                // Delete Button
-                if (donation.status != DonationStatus.reserved && 
-                    donation.status != DonationStatus.completed) ...[
-                  OutlinedButton(
-                    onPressed: () => _deleteDonation(donation),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.all(12),
-                    ),
-                    child: const Icon(Icons.delete, size: 18),
-                  ),
-                ],
+                    if (isExpired) ...[
+                      const SizedBox(width: 6),
+                      Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: const Color(0xFFBA1A1A), borderRadius: BorderRadius.circular(8)), child: Text('EXPIRED', style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                    ] else if (isExpiringSoon) ...[
+                      const SizedBox(width: 6),
+                      Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(8)), child: Text('URGENT', style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white))),
+                    ],
+                  ],
+                ]),
+                const SizedBox(height: 12),
+                _actionButtons(d, cs),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionButtons(Donation d, ColorScheme cs) {
+    switch (d.status) {
+      case DonationStatus.available:
+        return Row(children: [
+          Expanded(child: _OutlineBtn(label: 'Edit', icon: Icons.edit_outlined, cs: cs, onTap: () async {
+            await Navigator.push(context, MaterialPageRoute(builder: (_) => AddDonationScreen(donation: d)));
+            _loadDonations();
+          })),
+          const SizedBox(width: 8),
+          Expanded(child: _FillBtn(label: 'Pause', icon: Icons.pause_circle_outline_rounded, color: const Color(0xFFB45309), onTap: () => _updateStatus(d, 'cancelled'))),
+          const SizedBox(width: 8),
+          _DeleteBtn(cs: cs, onTap: () => _deleteDonation(d)),
+        ]);
+
+      case DonationStatus.reserved:
+        return Column(children: [
+          Row(children: [
+            Expanded(child: _OutlineBtn(label: 'View Chat', icon: Icons.chat_bubble_outline_rounded, cs: cs, onTap: () => _openChat(d))),
+            const SizedBox(width: 8),
+            Expanded(child: _FillBtn(label: 'Mark Done', icon: Icons.check_circle_outline_rounded, color: const Color(0xFF1D4ED8), onTap: () => _updateStatus(d, 'completed'))),
+          ]),
+          const SizedBox(height: 8),
+          _OutlineBtn(
+            label: 'Make Available Again',
+            icon: Icons.undo_rounded,
+            cs: cs,
+            onTap: () => _updateStatus(d, 'available'),
+          ),
+        ]);
+
+      case DonationStatus.completed:
+        return _OutlineBtn(label: 'View Chat', icon: Icons.chat_bubble_outline_rounded, cs: cs, onTap: () => _openChat(d));
+
+      case DonationStatus.cancelled:
+        return Row(children: [
+          Expanded(child: _FillBtn(label: 'Reactivate', icon: Icons.play_circle_outline_rounded, color: _kGreenMid, onTap: () => _updateStatus(d, 'available'))),
+          const SizedBox(width: 8),
+          _DeleteBtn(cs: cs, onTap: () => _deleteDonation(d)),
+        ]);
+    }
+  }
+
+  Widget _placeholder(ColorScheme cs) => Container(
+    color: cs.secondaryContainer,
+    child: const Center(child: AppLogo(width: 40, height: 40)),
+  );
+}
+
+// ── Reusable button widgets ────────────────────────────────────────────────────
+
+class _OutlineBtn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  final ColorScheme cs;
+  const _OutlineBtn({required this.label, required this.icon, required this.onTap, required this.cs});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(border: Border.all(color: cs.outlineVariant), borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: cs.onSurfaceVariant),
+            const SizedBox(width: 6),
+            Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurfaceVariant)),
           ],
         ),
       ),
     );
   }
+}
 
-  Color _getStatusColor(DonationStatus status) {
-    switch (status) {
-      case DonationStatus.available:
-        return Colors.green;
-      case DonationStatus.reserved:
-        return Colors.orange;
-      case DonationStatus.completed:
-        return Colors.blue;
-      case DonationStatus.cancelled:
-        return Colors.red;
-    }
+class _FillBtn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  const _FillBtn({required this.label, required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: Colors.white),
+            const SizedBox(width: 6),
+            Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+          ],
+        ),
+      ),
+    );
   }
+}
 
-  Color _getCategoryColor(DonationCategory category) {
-    switch (category) {
-      case DonationCategory.fruits:
-        return Colors.orange;
-      case DonationCategory.vegetables:
-        return Colors.green;
-      case DonationCategory.dairy:
-        return Colors.blue;
-      case DonationCategory.meat:
-        return Colors.red;
-      case DonationCategory.preparedMeals:
-        return Colors.purple;
-      case DonationCategory.grains:
-        return Colors.brown;
-      case DonationCategory.snacks:
-        return Colors.amber;
-      case DonationCategory.beverages:
-        return Colors.cyan;
-      case DonationCategory.other:
-        return Colors.grey;
-    }
-  }
+class _DeleteBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  final ColorScheme cs;
+  const _DeleteBtn({required this.onTap, required this.cs});
 
-  String _getCategoryName(DonationCategory category) {
-    switch (category) {
-      case DonationCategory.fruits:
-        return 'Fruits';
-      case DonationCategory.vegetables:
-        return 'Vegetables';
-      case DonationCategory.grains:
-        return 'Grains';
-      case DonationCategory.dairy:
-        return 'Dairy';
-      case DonationCategory.meat:
-        return 'Meat & Fish';
-      case DonationCategory.preparedMeals:
-        return 'Prepared Meals';
-      case DonationCategory.snacks:
-        return 'Snacks';
-      case DonationCategory.beverages:
-        return 'Beverages';
-      case DonationCategory.other:
-        return 'Other';
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays} days ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} hours ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} minutes ago';
-    } else {
-      return 'Just now';
-    }
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(border: Border.all(color: const Color(0xFFFFDAD6)), borderRadius: BorderRadius.circular(12)),
+        child: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFBA1A1A)),
+      ),
+    );
   }
 }

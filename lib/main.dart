@@ -1,24 +1,25 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:foodshare/auth/auth_gate.dart';
-
-import 'package:foodshare/themes/theme_provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'firebase_options.dart';
+import 'package:foodshare/auth/auth_gate.dart';
+import 'package:foodshare/themes/theme_provider.dart';
+import 'package:foodshare/themes/light_mode.dart';
+import 'package:foodshare/themes/dark_mode.dart';
+import 'providers/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  final authProvider = AuthProvider();
+  await authProvider.initialize();
+
+  final themeProvider = ThemeProvider();
+  await themeProvider.initialize();
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        StreamProvider<User?>.value(
-          value: FirebaseAuth.instance.authStateChanges(),
-          initialData: FirebaseAuth.instance.currentUser,
-        ),
+        ChangeNotifierProvider.value(value: authProvider),
+        ChangeNotifierProvider.value(value: themeProvider),
       ],
       child: const FoodShare(),
     ),
@@ -34,12 +35,12 @@ class FoodShare extends StatelessWidget {
       builder: (context, themeProvider, _) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          theme: themeProvider.themeData,
+          theme: lightMode,
+          darkTheme: darkMode,
+          themeMode: themeProvider.themeMode,
           home: const AuthGate(),
         );
       },
     );
   }
 }
-
-

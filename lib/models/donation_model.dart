@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum DonationStatus { available, reserved, completed, cancelled }
 
 enum DonationCategory {
@@ -15,93 +13,86 @@ enum DonationCategory {
 }
 
 class Donation {
-  final String? id;
+  final String id;
   final String donorId;
   final String title;
-  final String description;
-  final DonationCategory category;
-  final int quantity;
-  final String unit;
-  final Timestamp expiryDate;
-  final Timestamp pickupTime;
+  final String? description;
+  final DonationCategory? category;
+  final int? quantity;
+  final String? unit;
+  final DateTime? expiryDate;
+  final DateTime? pickupTime;
   final List<String> imageUrls;
   final DonationStatus status;
-  final GeoPoint? location;
-  final String city;
-  final Timestamp createdAt;
+  final String? city;
+  final double? latitude;
+  final double? longitude;
   final String? reservedBy;
-  final Timestamp? reservedAt;
+  final DateTime? reservedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  Donation({
-    this.id,
+  const Donation({
+    required this.id,
     required this.donorId,
     required this.title,
-    required this.description,
-    required this.category,
-    required this.quantity,
-    required this.unit,
-    required this.expiryDate,
-    required this.pickupTime,
+    this.description,
+    this.category,
+    this.quantity,
+    this.unit,
+    this.expiryDate,
+    this.pickupTime,
     this.imageUrls = const [],
     this.status = DonationStatus.available,
-    this.location,
-    required this.city,
-    required this.createdAt,
+    this.city,
+    this.latitude,
+    this.longitude,
     this.reservedBy,
     this.reservedAt,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
-  factory Donation.fromJson(Map<String, dynamic> json, {String? docId}) {
+  factory Donation.fromJson(Map<String, dynamic> json) {
     return Donation(
-      id: docId ?? json['id'],
-      donorId: json['donorId'] ?? '',
+      id: json['id'] ?? '',
+      donorId: json['donor_id'] ?? '',
       title: json['title'] ?? '',
-      description: json['description'] ?? '',
+      description: json['description'],
       category: _categoryFromString(json['category']),
-      quantity: json['quantity'] ?? 0,
-      unit: json['unit'] ?? '',
-      expiryDate: json['expiryDate'] ?? Timestamp.now(),
-      pickupTime: json['pickupTime'] ?? Timestamp.now(),
-      imageUrls: List<String>.from(json['imageUrls'] ?? []),
+      quantity: json['quantity'],
+      unit: json['unit'],
+      expiryDate: json['expiry_date'] != null
+          ? DateTime.parse(json['expiry_date'])
+          : null,
+      pickupTime: json['pickup_time'] != null
+          ? DateTime.parse(json['pickup_time'])
+          : null,
+      imageUrls: List<String>.from(json['image_urls'] ?? []),
       status: _statusFromString(json['status']),
-      location: json['location'],
-      city: json['city'] ?? '',
-      createdAt: json['createdAt'] ?? Timestamp.now(),
-      reservedBy: json['reservedBy'],
-      reservedAt: json['reservedAt'],
+      city: json['city'],
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      reservedBy: json['reserved_by'],
+      reservedAt: json['reserved_at'] != null
+          ? DateTime.parse(json['reserved_at'])
+          : null,
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: DateTime.parse(json['updated_at']),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'donorId': donorId,
-      'title': title,
-      'description': description,
-      'category': category.toString().split('.').last,
-      'quantity': quantity,
-      'unit': unit,
-      'expiryDate': expiryDate,
-      'pickupTime': pickupTime,
-      'imageUrls': imageUrls,
-      'status': status.toString().split('.').last,
-      'location': location,
-      'city': city,
-      'createdAt': createdAt,
-      'reservedBy': reservedBy,
-      'reservedAt': reservedAt,
-    };
-  }
-
-  static DonationCategory _categoryFromString(String? categoryString) {
+  static DonationCategory? _categoryFromString(String? s) {
+    if (s == null) return null;
     return DonationCategory.values.firstWhere(
-      (c) => c.toString().split('.').last == categoryString,
+      (c) => c.name == s,
       orElse: () => DonationCategory.other,
     );
   }
 
-  static DonationStatus _statusFromString(String? statusString) {
+  static DonationStatus _statusFromString(String? s) {
     return DonationStatus.values.firstWhere(
-      (s) => s.toString().split('.').last == statusString,
+      (st) => st.name == s,
       orElse: () => DonationStatus.available,
     );
   }

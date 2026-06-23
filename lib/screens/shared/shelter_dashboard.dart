@@ -1,18 +1,22 @@
-// screens/shared/shelter_dashboard.dart
-import 'dart:ui';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:foodshare/screens/shared/browse_donations_screen.dart';
-import 'package:foodshare/screens/shared/my_requests_screen.dart';
-import 'package:foodshare/screens/shelter/profile_screen.dart';
-import 'package:foodshare/screens/shelter/settings_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:foodshare/screens/shared/chats_list_screen.dart';
-import '../../services/auth_service.dart';
-//import '../../models/donation_model.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../widgets/onboarding_sheet.dart';
+import '../../widgets/app_logo.dart';
+import '../../services/donation_service.dart';
+import '../../services/profile_service.dart';
+import '../../services/request_service.dart';
+import '../../models/request_model.dart';
 import '../../models/shelter_model.dart';
-
+import 'browse_donations_screen.dart';
+import 'my_requests_screen.dart';
+import 'chats_list_screen.dart';
+import '../shelter/profile_screen.dart';
+import '../shelter/settings_screen.dart';
 import 'package:foodshare/models/user_model.dart';
+
+const _kBrandGreen = Color(0xFF38563B);
 
 class ShelterDashboard extends StatefulWidget {
   const ShelterDashboard({super.key});
@@ -22,458 +26,137 @@ class ShelterDashboard extends StatefulWidget {
 }
 
 class _ShelterDashboardState extends State<ShelterDashboard> {
-  final AuthService _authService = AuthService();
   int _selectedIndex = 0;
   Shelter? _shelter;
 
-  // Analytics data
   int _totalRequests = 0;
+  int _pendingRequests = 0;
   int _approvedRequests = 0;
-  int _completedRequests = 0;
   int _availableDonations = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadShelterData();
-    _loadAnalytics();
+    _loadData();
+    _maybeShowOnboarding();
   }
 
-  Future<void> _loadShelterData() async {
-    try {
-      final user = _authService.currentUser!;
-      final doc = await FirebaseFirestore.instance
-          .collection('shelters')
-          .doc(user.uid)
-          .get();
-
-      if (doc.exists) {
-        setState(() {
-          _shelter = Shelter.fromJson(doc.data()!);
-        });
+  void _maybeShowOnboarding() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final auth = context.read<AuthProvider>();
+      if (!auth.hasDoneOnboarding) {
+        await showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          isDismissible: false,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const OnboardingSheet(),
+        );
+        if (mounted) await auth.markOnboardingDone();
       }
-    } catch (e) {
-      print('Error loading shelter data: $e');
-    }
+    });
   }
 
-  Future<void> _loadAnalytics() async {
+  Future<void> _loadData() async {
+    final userId = context.read<AuthProvider>().user?.id;
+    if (userId == null) return;
+
+    final shelter = await ProfileService.getShelter(
+      userId,
+    ).catchError((_) => null);
+    final requests = await RequestService.myRequests().catchError(
+      (_) => <DonationRequest>[],
+    );
+
+    List<dynamic> available = [];
     try {
-      final user = _authService.currentUser!;
+      available = await DonationService.listDonations(
+        status: 'available',
+        city: shelter?.city,
+      );
+    } catch (_) {}
 
-      // Get shelter's requests
-      final requestsSnapshot = await FirebaseFirestore.instance
-          .collection('requests')
-          .where('shelterId', isEqualTo: user.uid)
-          .get();
-
-      final requests = requestsSnapshot.docs;
-      final approvedCount = requests
-          .where((doc) => doc.data()['status'] == 'approved')
+    if (!mounted) return;
+    setState(() {
+      if (shelter != null) _shelter = shelter;
+      _totalRequests = requests.length;
+      _pendingRequests = requests
+          .where((r) => r.status == RequestStatus.pending)
           .length;
-      final completedCount = requests
-          .where((doc) => doc.data()['status'] == 'completed')
+      _approvedRequests = requests
+          .where((r) => r.status == RequestStatus.approved)
           .length;
-
-      // Get available donations in shelter's city
-      final availableDonationsSnapshot = await FirebaseFirestore.instance
-          .collection('donations')
-          .where('status', isEqualTo: 'available')
-          .where('city', isEqualTo: _shelter?.city ?? '')
-          .get();
-
-      setState(() {
-        _totalRequests = requests.length;
-        _approvedRequests = approvedCount;
-        _completedRequests = completedCount;
-        _availableDonations = availableDonationsSnapshot.docs.length;
-      });
-    } catch (e) {
-      print('Error loading analytics: $e');
-    }
+      _availableDonations = available.length;
+    });
   }
 
-  void _onDrawerItemSelected(int index) {
-    setState(() => _selectedIndex = index);
-  }
+  void _onNavTap(int index) => setState(() => _selectedIndex = index);
 
-  Widget _getSelectedScreen() {
+  Widget _getBody() {
     switch (_selectedIndex) {
       case 0:
-        return _buildDashboardHome();
+        return _buildHome();
       case 1:
-        return ProfileScreen(
-          userType: UserType.shelter,
-          onDrawerItemSelected: _onDrawerItemSelected,
-        );
-      case 2:
-        return SettingsScreen(onDrawerItemSelected: _onDrawerItemSelected);
-      case 3:
         return ChatsListScreen(
           userType: UserType.shelter,
-          onDrawerItemSelected: _onDrawerItemSelected,
+          onDrawerItemSelected: _onNavTap,
         );
+      case 2:
+        return ProfileScreen(
+          userType: UserType.shelter,
+          onDrawerItemSelected: _onNavTap,
+        );
+      case 3:
+        return SettingsScreen(onDrawerItemSelected: _onNavTap);
       default:
-        return _buildDashboardHome();
+        return _buildHome();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: _selectedIndex == 0
-          ? AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leading: Padding(
-                padding: const EdgeInsets.only(left: 15.0),
-                child: Image.asset(
-                  'lib/assets/4.png',
-                  width: 150,
-                  height: 150,
-                  fit: BoxFit.contain,
-                ),
-              ),
-              title: Text(
-                'Dashboard',
-                style: GoogleFonts.poppins(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              actions: [
-                IconButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const BrowseDonationsScreen(),
-                      ),
-                    ).then((_) => _loadAnalytics());
-                  },
-                  icon: const Icon(Icons.search),
-                  tooltip: 'Find Donations',
-                ),
-              ],
-            )
-          : null,
-
-      body: _getSelectedScreen(),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color.fromARGB(144, 19, 30, 20),
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF2E7D32),
-        unselectedItemColor: const Color.fromARGB(255, 255, 255, 255),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+      backgroundColor: cs.surface,
+      body: _getBody(),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceContainer,
+          border: Border(top: BorderSide(color: cs.outlineVariant, width: 0.5)),
+        ),
+        child: BottomNavigationBar(
+          backgroundColor: cs.surfaceContainer,
+          currentIndex: _selectedIndex,
+          onTap: _onNavTap,
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: cs.primary,
+          unselectedItemColor: cs.onSurfaceVariant,
+          selectedLabelStyle: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.w600,
+            fontSize: 11,
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
+          unselectedLabelStyle: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.w400,
+            fontSize: 11,
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chats'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDashboardHome() {
-    return RefreshIndicator(
-      onRefresh: () async {
-        await _loadAnalytics();
-        await _loadShelterData();
-      },
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome Section
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withAlpha(38),
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF2E7D32).withAlpha(63),
-                        const Color(0xFF81C784).withAlpha(63),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withAlpha(5),
-                      width: 1.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(20),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome back!',
-                        style: TextStyle(
-                          color: Colors.white.withAlpha(213),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _shelter?.organizationName ?? 'Organization',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Helping our community through food recovery! 🤝',
-                        style: TextStyle(
-                          color: Colors.white.withAlpha(188),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+          elevation: 0,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.grid_view_rounded),
+              label: 'Dashboard',
             ),
-
-            const SizedBox(height: 24),
-
-            // Analytics Cards
-            Text(
-              'Your Impact',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_outline_rounded),
+              label: 'Chats',
             ),
-
-            const SizedBox(height: 16),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildAnalyticsCard(
-                    'Total Requests',
-                    _totalRequests.toString(),
-                    Icons.inbox,
-                    Colors.blue,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildAnalyticsCard(
-                    'Approved',
-                    _approvedRequests.toString(),
-                    Icons.check_circle,
-                    Colors.green,
-                  ),
-                ),
-              ],
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline_rounded),
+              label: 'Profile',
             ),
-
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildAnalyticsCard(
-                    'Completed',
-                    _completedRequests.toString(),
-                    Icons.done_all,
-                    Colors.purple,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildAnalyticsCard(
-                    'Available Now',
-                    _availableDonations.toString(),
-                    Icons.fastfood,
-                    Colors.orange,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 32),
-
-            // Quick Actions
-            Text(
-              'Quick Actions',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildActionCard(
-                    'Find Food',
-                    'Browse donations',
-                    Icons.search,
-                    const Color(0xFF2E7D32),
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const BrowseDonationsScreen(),
-                      ),
-                    ).then((_) => _loadAnalytics()),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildActionCard(
-                    'My Requests',
-                    'Track your requests',
-                    Icons.list_alt,
-                    Colors.blue,
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const MyRequestsScreen(),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildActionCard(
-                    'Chats',
-                    'View conversations',
-                    Icons.chat,
-                    Colors.cyan,
-                    () => setState(() => _selectedIndex = 3),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildActionCard(
-                    'Profile',
-                    'Update info',
-                    Icons.person,
-                    Colors.indigo,
-                    () => setState(() => _selectedIndex = 1),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-           
-
-            // Community Impact Section
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.blue.withAlpha(20),
-                    Colors.green.withAlpha(20),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFF2E7D32).withAlpha(50),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.favorite, color: Colors.red[400], size: 24),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Community Impact',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Your organization is helping reduce food waste and fight hunger in ${_shelter?.city ?? 'your city'}.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withAlpha(180),
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (_completedRequests > 0)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withAlpha(20),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.eco, color: Colors.green[600], size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'You\'ve successfully collected $_completedRequests donations! 🌟',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.green[700],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings_outlined),
+              label: 'Settings',
             ),
           ],
         ),
@@ -481,86 +164,495 @@ class _ShelterDashboardState extends State<ShelterDashboard> {
     );
   }
 
-  Widget _buildAnalyticsCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withAlpha(30),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withAlpha(100)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(icon, color: color, size: 24),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: color,
+  Widget _buildHome() {
+    final cs = Theme.of(context).colorScheme;
+    final name = _shelter?.organizationName ?? 'Organization';
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12
+        ? 'Good morning'
+        : hour < 17
+        ? 'Good afternoon'
+        : 'Good evening';
+
+    return RefreshIndicator(
+      color: cs.primary,
+      onRefresh: _loadData,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          // ── Greeting header ───────────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Container(
+              color: _kBrandGreen,
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 20,
+                left: 20,
+                right: 20,
+                bottom: 32,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const ClipOval(child: AppLogo(width: 42, height: 42)),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        greeting,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        name,
+                        style: GoogleFonts.bebasNeue(
+                          fontSize: 28,
+                          color: Colors.white,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Content ───────────────────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Container(
+              decoration: BoxDecoration(
+                color: cs.surface,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(context).colorScheme.onSurface,
+              transform: Matrix4.translationValues(0, -16, 0),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Quick Actions',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurfaceVariant,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Tier 1 — Primary CTA
+                  _HeroCard(
+                    icon: Icons.search_rounded,
+                    label: 'Find Food',
+                    subtitle: 'Browse available donations near you',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const BrowseDonationsScreen(),
+                      ),
+                    ).then((_) => _loadData()),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Tier 2 — Important secondary
+                  _WideCard(
+                    icon: Icons.list_alt_rounded,
+                    label: 'My Requests',
+                    subtitle: 'Track and manage your donation requests',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const MyRequestsScreen(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Tier 3 — Utility chips
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ChipCard(
+                          icon: Icons.chat_bubble_outline_rounded,
+                          label: 'Chats',
+                          onTap: () => _onNavTap(1),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _ChipCard(
+                          icon: Icons.person_outline_rounded,
+                          label: 'Profile',
+                          onTap: () => _onNavTap(2),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 28),
+                  Text(
+                    'Your Impact',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurfaceVariant,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Spotlight stat
+                  _SpotlightStat(
+                    icon: Icons.volunteer_activism_rounded,
+                    label: 'Available Near You',
+                    value: _availableDonations,
+                    detail:
+                        'donation${_availableDonations == 1 ? '' : 's'} ready for pickup',
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Mini stats row
+                  Row(
+                    children: [
+                      _MiniStat(
+                        label: 'Total\nRequests',
+                        value: _totalRequests,
+                      ),
+                      const SizedBox(width: 8),
+                      _MiniStat(label: 'Approved', value: _approvedRequests),
+                      const SizedBox(width: 8),
+                      _MiniStat(label: 'Pending', value: _pendingRequests),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildActionCard(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
+// ── Tier-1: Hero CTA card ──────────────────────────────────────────────────────
+
+class _HeroCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+  const _HeroCard({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         decoration: BoxDecoration(
-          color: color.withAlpha(20),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withAlpha(100)),
+          color: _kBrandGreen,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.75),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_forward_rounded,
+                color: Colors.white,
+                size: 17,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Tier-2: Wide secondary card ────────────────────────────────────────────────
+
+class _WideCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+  const _WideCard({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainer,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: cs.outlineVariant, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: cs.secondaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: cs.primary, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: cs.onSurfaceVariant,
+              size: 22,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Tier-3: Compact utility chip ───────────────────────────────────────────────
+
+class _ChipCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _ChipCard({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainer,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: cs.outlineVariant, width: 0.5),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: cs.onSurfaceVariant),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Spotlight stat ─────────────────────────────────────────────────────────────
+
+class _SpotlightStat extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int value;
+  final String detail;
+  const _SpotlightStat({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.detail,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      decoration: BoxDecoration(
+        color: cs.primaryContainer,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onPrimaryContainer.withValues(alpha: 0.7),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                Text(
+                  value.toString(),
+                  style: GoogleFonts.bebasNeue(
+                    fontSize: 60,
+                    color: cs.onPrimaryContainer,
+                    letterSpacing: 0.5,
+                    height: 1.05,
+                  ),
+                ),
+                Text(
+                  detail,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    color: cs.onPrimaryContainer.withValues(alpha: 0.65),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: cs.onPrimaryContainer.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: cs.onPrimaryContainer, size: 28),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Mini supporting stat ───────────────────────────────────────────────────────
+
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final int value;
+  const _MiniStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainer,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: cs.outlineVariant, width: 0.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 12),
             Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+              value.toString(),
+              style: GoogleFonts.bebasNeue(
+                fontSize: 30,
+                color: cs.primary,
+                letterSpacing: 0.5,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: cs.onSurfaceVariant,
+                height: 1.3,
               ),
+              maxLines: 2,
             ),
           ],
         ),

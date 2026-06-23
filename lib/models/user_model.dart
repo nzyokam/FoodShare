@@ -1,58 +1,35 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum UserType { restaurant, shelter }
 
 class AppUser {
-  final String uid;
+  final String id;
   final String email;
-  final String displayName;
-  final String? photoURL;
+  final String? displayName;
+  final String? photoUrl;
   final UserType? userType;
   final bool profileComplete;
-  final Timestamp createdAt;
-  final Timestamp? updatedAt;
 
-  AppUser({
-    required this.uid,
+  const AppUser({
+    required this.id,
     required this.email,
-    required this.displayName,
-    this.photoURL,
+    this.displayName,
+    this.photoUrl,
     this.userType,
-    this.profileComplete = false,
-    required this.createdAt,
-    this.updatedAt,
+    required this.profileComplete,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
-    UserType? userType;
-    if (json['userType'] != null) {
-      userType = json['userType'] == 'restaurant' 
-          ? UserType.restaurant 
-          : UserType.shelter;
-    }
-
+    final typeStr = json['user_type'] as String?;
     return AppUser(
-      uid: json['uid'] ?? '',
+      id: json['id'] ?? '',
       email: json['email'] ?? '',
-      displayName: json['displayName'] ?? '',
-      photoURL: json['photoURL'],
-      userType: userType,
-      profileComplete: json['profileComplete'] ?? false,
-      createdAt: json['createdAt'] ?? Timestamp.now(),
-      updatedAt: json['updatedAt'],
+      displayName: json['display_name'],
+      photoUrl: json['photo_url'],
+      userType: typeStr == 'restaurant'
+          ? UserType.restaurant
+          : typeStr == 'shelter'
+              ? UserType.shelter
+              : null,
+      profileComplete: json['profile_complete'] ?? false,
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'uid': uid,
-      'email': email,
-      'displayName': displayName,
-      'photoURL': photoURL,
-      'userType': userType?.toString().split('.').last,
-      'profileComplete': profileComplete,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
-    };
   }
 }

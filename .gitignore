@@ -38,7 +38,7 @@ migrate_working_dir/
 **/bug.txt
 # Symbolication related
 app.*.symbols
-
+firebase_options.dart
 # Obfuscation related
 app.*.map.json
 
