@@ -41,7 +41,6 @@ abstract class AppSnackBar {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           elevation: 8,
-          contentTextStyle: textStyle,
           content: Row(
             children: [
               Icon(icon, color: accentColor, size: 22),
