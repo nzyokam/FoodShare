@@ -65,5 +65,21 @@ class NotificationService {
     } catch (_) {}
   }
 
+  /// Call this after login — the token save at startup fails because the user
+  /// isn't authenticated yet, so we re-save once they have a valid JWT.
+  static Future<void> saveTokenAfterLogin() async {
+    try {
+      String? token;
+      if (kIsWeb) {
+        token = await _messaging.getToken(
+          vapidKey: 'BBxt_1fesZe8PvqNNirWYcKXsXz4SnSHmEwTLoIp4VhrQEr_01JA4oUP8v7vxPcdYIkJv1HcHLTEZ94w18nXMVg',
+        );
+      } else {
+        token = await _messaging.getToken();
+      }
+      if (token != null) await _saveToken(token);
+    } catch (_) {}
+  }
+
   static void updateContext(BuildContext context) => _context = context;
 }

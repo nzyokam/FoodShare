@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_notifier.dart';
 import '../models/user_model.dart';
+import '../services/notification_service.dart';
 import 'auth_page.dart';
 import 'user_type_selection.dart';
 import 'profile_setup/restaurant_profile_setup.dart';
@@ -14,6 +15,14 @@ class AuthGate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<AsyncValue<AuthState>>(authNotifierProvider, (prev, next) {
+      final wasLoggedIn = prev?.asData?.value.isLoggedIn ?? false;
+      final isLoggedIn = next.asData?.value.isLoggedIn ?? false;
+      if (!wasLoggedIn && isLoggedIn) {
+        NotificationService.saveTokenAfterLogin();
+      }
+    });
+
     final authAsync = ref.watch(authNotifierProvider);
 
     return authAsync.when(
