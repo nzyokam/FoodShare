@@ -8,6 +8,7 @@ import '../../models/donation_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/donation_service.dart';
 import '../../services/profile_service.dart';
+import '../../widgets/app_snackbar.dart';
 
 const _kGreen    = Color(0xFF38563B);
 const _kGreenMid = Color(0xFF506F52);
@@ -45,12 +46,7 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
   void initState() {
     super.initState();
     _guidelinesRecognizer = TapGestureRecognizer()
-      ..onTap = () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Community Guidelines coming soon!', style: GoogleFonts.plusJakartaSans()),
-            backgroundColor: _kGreen,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ));
+      ..onTap = () => AppSnackBar.showInfo(context, 'Community Guidelines coming soon!');
     if (widget.donation != null) _loadExisting();
   }
 
@@ -173,19 +169,8 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
     }
   }
 
-  void _showError(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-    content: Text(msg, style: GoogleFonts.plusJakartaSans()),
-    backgroundColor: const Color(0xFFBA1A1A),
-    behavior: SnackBarBehavior.floating,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-  ));
-
-  void _showSuccess(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-    content: Text(msg, style: GoogleFonts.plusJakartaSans()),
-    backgroundColor: _kGreen,
-    behavior: SnackBarBehavior.floating,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-  ));
+  void _showError(String msg) => AppSnackBar.showError(context, msg);
+  void _showSuccess(String msg) => AppSnackBar.showSuccess(context, msg);
 
   @override
   Widget build(BuildContext context) {

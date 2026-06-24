@@ -6,6 +6,7 @@ import '../../services/chat_service.dart';
 import '../../services/donation_service.dart';
 import '../../services/profile_service.dart';
 import '../../services/request_service.dart';
+import '../../widgets/app_snackbar.dart';
 import '../shelter/chat_screen.dart';
 
 class _ReservedItem {
@@ -58,7 +59,7 @@ class _ReservedDonationsScreenState extends State<ReservedDonationsScreen> {
       if (!mounted) return;
       Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(chatId: chat.id, title: 'Restaurant Chat', donationTitle: donation.title)));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      if (mounted) AppSnackBar.showError(context, 'Error: $e');
     }
   }
 

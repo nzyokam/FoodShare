@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../themes/theme_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_logo.dart';
+import '../../widgets/app_snackbar.dart';
 
 class SettingsScreen extends StatelessWidget {
   final Function(int)? onDrawerItemSelected;
@@ -199,8 +200,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _snack(BuildContext context, String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  void _snack(BuildContext context, String msg) => AppSnackBar.showInfo(context, msg);
 
   Widget _sectionHeader(String title, BuildContext context, {Color? color}) =>
       Padding(

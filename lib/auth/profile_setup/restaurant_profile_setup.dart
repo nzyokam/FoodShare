@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/profile_service.dart';
+import '../../widgets/app_snackbar.dart';
 
 class RestaurantProfileSetup extends StatefulWidget {
   const RestaurantProfileSetup({super.key});
@@ -65,9 +66,7 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
       if (mounted) {
         await context.read<AuthProvider>().refreshUser();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile created successfully!')),
-          );
+          AppSnackBar.showSuccess(context, 'Profile created successfully! Welcome to FoodShare!');
         }
       }
     } catch (e) {
@@ -77,11 +76,7 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
     }
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
+  void _showError(String message) => AppSnackBar.showError(context, message);
 
   @override
   Widget build(BuildContext context) {

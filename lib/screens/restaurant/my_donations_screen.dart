@@ -5,6 +5,7 @@ import '../../models/donation_model.dart';
 import '../../services/chat_service.dart';
 import '../../services/donation_service.dart';
 import '../../widgets/app_logo.dart';
+import '../../widgets/app_snackbar.dart';
 import '../shelter/chat_screen.dart';
 import 'add_donation_screen.dart';
 
@@ -100,14 +101,8 @@ class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProvid
     }
   }
 
-  void _showSnack(String msg, {required bool isError}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: GoogleFonts.plusJakartaSans()),
-      backgroundColor: isError ? const Color(0xFFBA1A1A) : _kGreen,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ));
-  }
+  void _showSnack(String msg, {required bool isError}) =>
+      isError ? AppSnackBar.showError(context, msg) : AppSnackBar.showSuccess(context, msg);
 
   @override
   Widget build(BuildContext context) {

@@ -3,6 +3,7 @@ import 'package:foodshare/models/restaurant_model.dart';
 import 'package:foodshare/models/shelter_model.dart';
 import 'package:foodshare/models/user_model.dart';
 import 'package:foodshare/services/profile_service.dart';
+import '../../widgets/app_snackbar.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final UserType userType;
@@ -108,11 +109,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated successfully!'), backgroundColor: Colors.green));
+        AppSnackBar.showSuccess(context, 'Profile updated successfully!');
         Navigator.pop(context, true);
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error updating profile: $e'), backgroundColor: Colors.red));
+      if (mounted) AppSnackBar.showError(context, 'Error updating profile: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/donation_model.dart';
 import '../../widgets/app_logo.dart';
+import '../../widgets/app_snackbar.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/donation_service.dart';
 import '../../services/profile_service.dart';
@@ -120,28 +121,15 @@ class _BrowseDonationsScreenState extends State<BrowseDonationsScreen> {
                   onPressed: () async {
                     final msg = messageController.text.trim();
                     if (msg.isEmpty) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Please add a message')));
+                      AppSnackBar.showWarning(ctx, 'Please add a message');
                       return;
                     }
                     Navigator.pop(ctx);
                     try {
                       await RequestService.createRequest(donationId: donation.id, message: msg);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Request sent!', style: GoogleFonts.plusJakartaSans()),
-                            backgroundColor: _kGreen,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        );
-                      }
+                      if (mounted) AppSnackBar.showSuccess(context, 'Request sent!');
                     } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e'), backgroundColor: const Color(0xFFBA1A1A), behavior: SnackBarBehavior.floating),
-                        );
-                      }
+                      if (mounted) AppSnackBar.showError(context, 'Error: $e');
                     }
                   },
                   style: ElevatedButton.styleFrom(backgroundColor: _kGreenMid, foregroundColor: Colors.white, shape: const StadiumBorder(), elevation: 0),

@@ -6,6 +6,7 @@ import '../../services/chat_service.dart';
 import '../../services/donation_service.dart';
 import '../../services/profile_service.dart';
 import '../../services/request_service.dart';
+import '../../widgets/app_snackbar.dart';
 import '../shelter/chat_screen.dart';
 
 class RequestWithDetails {
@@ -77,9 +78,9 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> with TickerProvider
     try {
       await RequestService.cancelRequest(request.id);
       await _loadRequests();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request cancelled')));
+      if (mounted) AppSnackBar.showInfo(context, 'Request cancelled');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      if (mounted) AppSnackBar.showError(context, 'Error: $e');
     }
   }
 
@@ -89,7 +90,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> with TickerProvider
       if (!mounted) return;
       Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(chatId: chat.id, title: 'Restaurant Chat', donationTitle: donation.title)));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      if (mounted) AppSnackBar.showError(context, 'Error: $e');
     }
   }
 

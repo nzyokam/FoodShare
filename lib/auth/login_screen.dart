@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/app_snackbar.dart';
 import '../widgets/welcome_sheet.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -38,14 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await context.read<AuthProvider>().signInWithGoogle();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sign-in failed: ${e.toString()}'),
-            backgroundColor: const Color(0xFFBA1A1A),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
+        AppSnackBar.showError(context, 'Sign-in failed: ${e.toString()}');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

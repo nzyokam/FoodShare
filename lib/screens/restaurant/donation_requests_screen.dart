@@ -6,6 +6,7 @@ import '../../services/chat_service.dart';
 import '../../services/donation_service.dart';
 import '../../services/profile_service.dart';
 import '../../services/request_service.dart';
+import '../../widgets/app_snackbar.dart';
 import '../shelter/chat_screen.dart';
 
 class RequestWithDetails {
@@ -69,9 +70,11 @@ class _DonationRequestsScreenState extends State<DonationRequestsScreen> with Ti
         await RequestService.declineRequest(request.id);
       }
       await _loadRequests();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(approve ? 'Request approved!' : 'Request declined'), backgroundColor: approve ? Colors.green : Colors.orange));
+      if (mounted) approve
+          ? AppSnackBar.showSuccess(context, 'Request approved!')
+          : AppSnackBar.showWarning(context, 'Request declined');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      if (mounted) AppSnackBar.showError(context, 'Error: $e');
     }
   }
 
@@ -81,12 +84,12 @@ class _DonationRequestsScreenState extends State<DonationRequestsScreen> with Ti
       final chat = chats.cast<dynamic>().firstWhere((c) => c.donationId == donation.id, orElse: () => null);
       if (!mounted) return;
       if (chat == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No conversation yet for this donation')));
+        AppSnackBar.showInfo(context, 'No conversation yet for this donation');
         return;
       }
       Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(chatId: chat.id, title: 'Shelter Chat', donationTitle: donation.title)));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      if (mounted) AppSnackBar.showError(context, 'Error: $e');
     }
   }
 

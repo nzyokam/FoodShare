@@ -3,6 +3,7 @@ import 'package:foodshare/models/user_model.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/app_snackbar.dart';
 
 class UserTypeSelection extends StatefulWidget {
   const UserTypeSelection({super.key});
@@ -22,14 +23,7 @@ class _UserTypeSelectionState extends State<UserTypeSelection> {
       await context.read<AuthProvider>().setUserType(_selectedType!);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: const Color(0xFFBA1A1A),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
+        AppSnackBar.showError(context, 'Error: ${e.toString()}');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

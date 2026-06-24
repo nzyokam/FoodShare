@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/chat_service.dart';
+import '../../widgets/app_snackbar.dart';
 import '../../models/chat_model.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -75,7 +76,7 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to send: $e'), backgroundColor: Colors.red));
+        AppSnackBar.showError(context, 'Failed to send: $e');
       }
     } finally {
       if (mounted) setState(() => _sending = false);
