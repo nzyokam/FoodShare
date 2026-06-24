@@ -114,8 +114,7 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
     setState(() => isExpiry ? _expiryDate = dt : _pickupTime = dt);
   }
 
-  String _categoryToApi(DonationCategory cat) =>
-      cat == DonationCategory.preparedMeals ? 'prepared_meals' : cat.name;
+  String _categoryToApi(DonationCategory cat) => cat.name;
 
   Future<void> _saveDonation() async {
     if (!_formKey.currentState!.validate()) return;
