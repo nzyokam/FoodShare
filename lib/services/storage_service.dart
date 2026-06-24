@@ -7,7 +7,7 @@ class StorageService {
   // 1. Create account at cloudinary.com
   // 2. Dashboard → Settings → Upload → Add upload preset → Mode: Unsigned → Name: foodshare_unsigned
   // 3. Copy your Cloud Name from the dashboard home page
-  static const _cloudName = 'YOUR_CLOUD_NAME';
+  static const _cloudName = 'djx6o7foi';
   static const _uploadPreset = 'foodshare_unsigned';
 
   static bool get isConfigured => _cloudName != 'YOUR_CLOUD_NAME';

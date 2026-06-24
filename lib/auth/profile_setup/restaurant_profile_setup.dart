@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
+import '../../providers/auth_notifier.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/app_snackbar.dart';
 
-class RestaurantProfileSetup extends StatefulWidget {
+class RestaurantProfileSetup extends ConsumerStatefulWidget {
   const RestaurantProfileSetup({super.key});
 
   @override
-  State<RestaurantProfileSetup> createState() => _RestaurantProfileSetupState();
+  ConsumerState<RestaurantProfileSetup> createState() => _RestaurantProfileSetupState();
 }
 
-class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
+class _RestaurantProfileSetupState extends ConsumerState<RestaurantProfileSetup> {
   final _formKey = GlobalKey<FormState>();
 
   final _businessNameController = TextEditingController();
@@ -64,7 +64,7 @@ class _RestaurantProfileSetupState extends State<RestaurantProfileSetup> {
       );
 
       if (mounted) {
-        await context.read<AuthProvider>().refreshUser();
+        await ref.read(authNotifierProvider.notifier).refreshUser();
         if (mounted) {
           AppSnackBar.showSuccess(context, 'Profile created successfully! Welcome to FoodShare!');
         }

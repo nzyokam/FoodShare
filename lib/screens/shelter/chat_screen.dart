@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/auth_notifier.dart';
 import '../../services/chat_service.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../models/chat_model.dart';
 
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends ConsumerStatefulWidget {
   final String chatId;
   final String title;
   final String donationTitle;
@@ -19,10 +19,10 @@ class ChatScreen extends StatefulWidget {
   });
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
 
@@ -85,7 +85,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUserId = context.read<AuthProvider>().user?.id ?? '';
+    final currentUserId = ref.read(authNotifierProvider).asData?.value.user?.id ?? '';
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,

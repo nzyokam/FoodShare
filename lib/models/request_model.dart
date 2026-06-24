@@ -9,6 +9,15 @@ class DonationRequest {
   final DateTime createdAt;
   final DateTime? respondedAt;
 
+  // Enriched fields from backend JOIN (null when using plain RequestOut)
+  final String? donationTitle;
+  final List<String> donationImageUrls;
+  final int? donationQuantity;
+  final String? donationUnit;
+  final DateTime? donationExpiryDate;
+  final String? donationStatus;
+  final String? otherPartyName;
+
   const DonationRequest({
     required this.id,
     required this.shelterId,
@@ -17,9 +26,17 @@ class DonationRequest {
     required this.status,
     required this.createdAt,
     this.respondedAt,
+    this.donationTitle,
+    this.donationImageUrls = const [],
+    this.donationQuantity,
+    this.donationUnit,
+    this.donationExpiryDate,
+    this.donationStatus,
+    this.otherPartyName,
   });
 
   factory DonationRequest.fromJson(Map<String, dynamic> json) {
+    final donationJson = json['donation'] as Map<String, dynamic>?;
     return DonationRequest(
       id: json['id'] ?? '',
       shelterId: json['shelter_id'] ?? '',
@@ -30,6 +47,17 @@ class DonationRequest {
       respondedAt: json['responded_at'] != null
           ? DateTime.parse(json['responded_at'])
           : null,
+      donationTitle: donationJson?['title'] as String?,
+      donationImageUrls: donationJson != null
+          ? List<String>.from(donationJson['image_urls'] ?? [])
+          : const [],
+      donationQuantity: donationJson?['quantity'] as int?,
+      donationUnit: donationJson?['unit'] as String?,
+      donationExpiryDate: donationJson?['expiry_date'] != null
+          ? DateTime.parse(donationJson!['expiry_date'])
+          : null,
+      donationStatus: donationJson?['status'] as String?,
+      otherPartyName: json['other_party_name'] as String?,
     );
   }
 

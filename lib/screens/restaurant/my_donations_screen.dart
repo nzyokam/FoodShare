@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../models/chat_model.dart';
 import '../../models/donation_model.dart';
+import '../../providers/donations_provider.dart';
 import '../../services/chat_service.dart';
 import '../../services/donation_service.dart';
 import '../../widgets/app_logo.dart';
@@ -11,23 +12,20 @@ import 'add_donation_screen.dart';
 
 const _kGreenMid = Color(0xFF506F52);
 
-class MyDonationsScreen extends StatefulWidget {
+class MyDonationsScreen extends ConsumerStatefulWidget {
   const MyDonationsScreen({super.key});
 
   @override
-  State<MyDonationsScreen> createState() => _MyDonationsScreenState();
+  ConsumerState<MyDonationsScreen> createState() => _MyDonationsScreenState();
 }
 
-class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProviderStateMixin {
+class _MyDonationsScreenState extends ConsumerState<MyDonationsScreen> with TickerProviderStateMixin {
   late TabController _tabController;
-  List<Donation> _all = [];
-  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _loadDonations();
   }
 
   @override
@@ -36,18 +34,8 @@ class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProvid
     super.dispose();
   }
 
-  Future<void> _loadDonations() async {
-    setState(() => _loading = true);
-    try {
-      final result = await DonationService.myDonations();
-      if (mounted) setState(() { _all = result; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  List<Donation> _filtered(DonationStatus? status) =>
-      status == null ? _all : _all.where((d) => d.status == status).toList();
+  List<Donation> _filtered(List<Donation> all, DonationStatus? status) =>
+      status == null ? all : all.where((d) => d.status == status).toList();
 
   Future<void> _deleteDonation(Donation donation) async {
     final cs = Theme.of(context).colorScheme;
@@ -71,7 +59,7 @@ class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProvid
     if (confirmed != true) return;
     try {
       await DonationService.deleteDonation(donation.id);
-      await _loadDonations();
+      ref.invalidate(myDonationsProvider);
       if (mounted) _showSnack('Donation deleted', isError: false);
     } catch (e) {
       if (mounted) _showSnack('Error: $e', isError: true);
@@ -81,7 +69,7 @@ class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProvid
   Future<void> _updateStatus(Donation donation, String newStatus) async {
     try {
       await DonationService.updateDonation(donation.id, status: newStatus);
-      await _loadDonations();
+      ref.invalidate(myDonationsProvider);
     } catch (e) {
       if (mounted) _showSnack('Error: $e', isError: true);
     }
@@ -89,12 +77,9 @@ class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProvid
 
   Future<void> _openChat(Donation donation) async {
     try {
-      final chats = await ChatService.listChats();
-      Chat? chat;
-      try { chat = chats.firstWhere((c) => c.donationId == donation.id); } catch (_) {}
+      final chat = await ChatService.getOrCreateChat(donation.id);
       if (!mounted) return;
-      if (chat == null) { _showSnack('No conversation started yet', isError: false); return; }
-      Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(chatId: chat!.id, title: 'Shelter Chat', donationTitle: donation.title)));
+      Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(chatId: chat.id, title: 'Shelter Chat', donationTitle: donation.title)));
     } catch (e) {
       if (mounted) _showSnack('Error: $e', isError: true);
     }
@@ -124,7 +109,7 @@ class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProvid
             child: GestureDetector(
               onTap: () async {
                 await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddDonationScreen()));
-                _loadDonations();
+                ref.invalidate(myDonationsProvider);
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -169,30 +154,32 @@ class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProvid
 
           // ── List ─────────────────────────────────────────────────────────────
           Expanded(
-            child: _loading
-                ? Center(child: CircularProgressIndicator(color: cs.primary))
-                : RefreshIndicator(
-                    color: cs.primary,
-                    onRefresh: _loadDonations,
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _donationsList(null),
-                        _donationsList(DonationStatus.available),
-                        _donationsList(DonationStatus.reserved),
-                        _donationsList(DonationStatus.completed),
-                      ],
-                    ),
-                  ),
+            child: ref.watch(myDonationsProvider).when(
+              loading: () => Center(child: CircularProgressIndicator(color: cs.primary)),
+              error: (e, _) => Center(child: Text('Error: $e', style: TextStyle(color: cs.error))),
+              data: (all) => RefreshIndicator(
+                color: cs.primary,
+                onRefresh: () async => ref.invalidate(myDonationsProvider),
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _donationsList(all, null),
+                    _donationsList(all, DonationStatus.available),
+                    _donationsList(all, DonationStatus.reserved),
+                    _donationsList(all, DonationStatus.completed),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _donationsList(DonationStatus? status) {
+  Widget _donationsList(List<Donation> all, DonationStatus? status) {
     final cs = Theme.of(context).colorScheme;
-    final donations = _filtered(status);
+    final donations = _filtered(all, status);
     if (donations.isEmpty) {
       // "Done" tab gets an instructional placeholder — no Add button
       if (status == DonationStatus.completed) {
@@ -239,7 +226,7 @@ class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProvid
             GestureDetector(
               onTap: () async {
                 await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddDonationScreen()));
-                _loadDonations();
+                ref.invalidate(myDonationsProvider);
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -363,7 +350,7 @@ class _MyDonationsScreenState extends State<MyDonationsScreen> with TickerProvid
         return Row(children: [
           Expanded(child: _OutlineBtn(label: 'Edit', icon: Icons.edit_outlined, cs: cs, onTap: () async {
             await Navigator.push(context, MaterialPageRoute(builder: (_) => AddDonationScreen(donation: d)));
-            _loadDonations();
+            ref.invalidate(myDonationsProvider);
           })),
           const SizedBox(width: 8),
           Expanded(child: _FillBtn(label: 'Pause', icon: Icons.pause_circle_outline_rounded, color: const Color(0xFFB45309), onTap: () => _updateStatus(d, 'cancelled'))),

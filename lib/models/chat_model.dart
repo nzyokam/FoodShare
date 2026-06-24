@@ -6,6 +6,10 @@ class Chat {
   final String? lastMessage;
   final DateTime lastMessageAt;
   final DateTime createdAt;
+  final int unreadCount;
+  // Enriched fields from backend JOIN (available from list_chats endpoint)
+  final String? donationTitle;
+  final String? otherPartyName;
 
   const Chat({
     required this.id,
@@ -15,6 +19,9 @@ class Chat {
     this.lastMessage,
     required this.lastMessageAt,
     required this.createdAt,
+    this.unreadCount = 0,
+    this.donationTitle,
+    this.otherPartyName,
   });
 
   factory Chat.fromJson(Map<String, dynamic> json) {
@@ -26,6 +33,9 @@ class Chat {
       lastMessage: json['last_message'],
       lastMessageAt: DateTime.parse(json['last_message_at']),
       createdAt: DateTime.parse(json['created_at']),
+      unreadCount: json['unread_count'] ?? 0,
+      donationTitle: json['donation_title'] as String?,
+      otherPartyName: json['other_party_name'] as String?,
     );
   }
 }

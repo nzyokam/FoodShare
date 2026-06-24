@@ -1,8 +1,8 @@
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/auth_notifier.dart';
 import '../../services/profile_service.dart';
 
 import '../../models/restaurant_model.dart';
@@ -10,16 +10,16 @@ import '../../models/shelter_model.dart';
 import '../../models/user_model.dart';
 import '../shared/edit_profile_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   final UserType userType;
   final Function(int)? onDrawerItemSelected;
   const ProfileScreen({super.key, required this.userType, required this.onDrawerItemSelected});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Restaurant? _restaurant;
   Shelter? _shelter;
   bool _isLoading = true;
@@ -31,7 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadData() async {
-    final userId = context.read<AuthProvider>().user?.id;
+    final userId = ref.read(authNotifierProvider).asData?.value.user?.id;
     if (userId == null) return;
     try {
       if (widget.userType == UserType.restaurant) {
@@ -56,8 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
-    final auth = context.watch<AuthProvider>();
-    final user = auth.user;
+    final user = ref.watch(authNotifierProvider).asData?.value.user;
     final photoUrl = user?.photoUrl;
     final displayName = user?.displayName ??
         (widget.userType == UserType.restaurant ? _restaurant?.businessName : _shelter?.organizationName) ?? 'User';
@@ -129,7 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _actionBtn('Edit Profile', Icons.edit, Theme.of(context).colorScheme.primary, _editProfile),
             const SizedBox(height: 16),
             _actionBtn('Sign Out', Icons.logout, Colors.red, () async {
-              await context.read<AuthProvider>().signOut();
+              await ref.read(authNotifierProvider.notifier).signOut();
             }),
           ],
         ),

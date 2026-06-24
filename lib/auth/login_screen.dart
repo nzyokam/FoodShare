@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import '../providers/auth_notifier.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/welcome_sheet.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
 
   @override
@@ -36,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
     try {
-      await context.read<AuthProvider>().signInWithGoogle();
+      await ref.read(authNotifierProvider.notifier).signInWithGoogle();
     } catch (e) {
       if (mounted) {
         AppSnackBar.showError(context, 'Sign-in failed: ${e.toString()}');

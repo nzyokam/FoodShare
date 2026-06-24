@@ -10,9 +10,12 @@ class ChatService {
     return (jsonDecode(res.body) as List).map((j) => Chat.fromJson(j)).toList();
   }
 
-  /// Shelter calls this to open (or fetch existing) chat for a donation.
-  static Future<Chat> getOrCreateChat(String donationId) async {
-    final res = await ApiClient.post('/chats', body: {'donation_id': donationId});
+  /// Opens or creates a chat for a donation.
+  /// [shelterId] is required when called by a restaurant to initiate a new chat.
+  static Future<Chat> getOrCreateChat(String donationId, {String? shelterId}) async {
+    final body = <String, dynamic>{'donation_id': donationId};
+    if (shelterId != null) body['shelter_id'] = shelterId;
+    final res = await ApiClient.post('/chats', body: body);
     if (res.statusCode != 200) throw Exception(ApiClient.errorMessage(res));
     return Chat.fromJson(jsonDecode(res.body));
   }

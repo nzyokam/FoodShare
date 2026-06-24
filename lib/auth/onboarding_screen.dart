@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:foodshare/auth/auth_gate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import '../providers/auth_notifier.dart';
 import '../widgets/app_logo.dart';
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
 
@@ -37,7 +37,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _finish() async {
     // Mark seen in the provider so AuthGate sees hasSeenOnboarding = true immediately
-    await context.read<AuthProvider>().markOnboardingDone();
+    await ref.read(authNotifierProvider.notifier).markOnboardingDone();
     if (!mounted) return;
     Navigator.pushReplacement(
       context,

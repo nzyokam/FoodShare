@@ -1,58 +1,76 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:foodshare/auth/auth_gate.dart';
-import 'package:foodshare/themes/theme_provider.dart';
 import 'package:foodshare/themes/light_mode.dart';
 import 'package:foodshare/themes/dark_mode.dart';
-import 'providers/auth_provider.dart';
+import 'firebase_options.dart';
+import 'providers/theme_notifier.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final authProvider = AuthProvider();
-  await authProvider.initialize();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  final themeProvider = ThemeProvider();
-  await themeProvider.initialize();
+  // Load saved theme before first frame so there's no flash
+  final prefs = await SharedPreferences.getInstance();
+  final savedTheme = prefs.getString('theme_mode');
+  final initialTheme = switch (savedTheme) {
+    'dark' => ThemeMode.dark,
+    'light' => ThemeMode.light,
+    _ => ThemeMode.system,
+  };
 
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: authProvider),
-        ChangeNotifierProvider.value(value: themeProvider),
+    ProviderScope(
+      overrides: [
+        themeNotifierProvider.overrideWith(() => ThemeNotifier(initialTheme)),
       ],
       child: const FoodShare(),
     ),
   );
 }
 
-class FoodShare extends StatelessWidget {
+class FoodShare extends ConsumerStatefulWidget {
   const FoodShare({super.key});
 
   @override
+  ConsumerState<FoodShare> createState() => _FoodShareState();
+}
+
+class _FoodShareState extends ConsumerState<FoodShare> {
+  bool _notifInitialized = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, _) {
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: lightMode,
-          darkTheme: darkMode,
-          themeMode: themeProvider.themeMode,
-          home: const AuthGate(),
-          builder: (context, child) {
-            if (kIsWeb) {
-              final size = MediaQuery.of(context).size;
-              final w = size.width;
-              final h = size.height;
-              // Large screen (desktop / tablet)
-              if (w >= 600 && h >= 500) return const _MobileOnlyGate();
-              // Phone rotated to landscape
-              if (w > h) return const _PortraitOnlyGate();
-            }
-            return child ?? const SizedBox.shrink();
-          },
-        );
+    final themeMode = ref.watch(themeNotifierProvider);
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: lightMode,
+      darkTheme: darkMode,
+      themeMode: themeMode,
+      home: const AuthGate(),
+      builder: (context, child) {
+        if (!_notifInitialized) {
+          _notifInitialized = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) NotificationService.initialize(context);
+          });
+        } else {
+          NotificationService.updateContext(context);
+        }
+        if (kIsWeb) {
+          final size = MediaQuery.of(context).size;
+          final w = size.width;
+          final h = size.height;
+          if (w >= 600 && h >= 500) return const _MobileOnlyGate();
+          if (w > h) return const _PortraitOnlyGate();
+        }
+        return child ?? const SizedBox.shrink();
       },
     );
   }

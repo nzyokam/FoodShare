@@ -1,11 +1,11 @@
 import 'dart:typed_data';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 import '../../models/donation_model.dart';
-import '../../providers/auth_provider.dart';
+import '../../providers/auth_notifier.dart';
 import '../../services/donation_service.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/app_snackbar.dart';
@@ -13,15 +13,15 @@ import '../../widgets/app_snackbar.dart';
 const _kGreen    = Color(0xFF38563B);
 const _kGreenMid = Color(0xFF506F52);
 
-class AddDonationScreen extends StatefulWidget {
+class AddDonationScreen extends ConsumerStatefulWidget {
   final Donation? donation;
   const AddDonationScreen({super.key, this.donation});
 
   @override
-  State<AddDonationScreen> createState() => _AddDonationScreenState();
+  ConsumerState<AddDonationScreen> createState() => _AddDonationScreenState();
 }
 
-class _AddDonationScreenState extends State<AddDonationScreen> {
+class _AddDonationScreenState extends ConsumerState<AddDonationScreen> {
   final _formKey     = GlobalKey<FormState>();
   final _titleCtrl   = TextEditingController();
   final _descCtrl    = TextEditingController();
@@ -125,7 +125,7 @@ class _AddDonationScreenState extends State<AddDonationScreen> {
     setState(() => _isLoading = true);
     try {
       String? city;
-      final userId = context.read<AuthProvider>().user?.id;
+      final userId = ref.read(authNotifierProvider).asData?.value.user?.id;
       if (userId != null) {
         final restaurant = await ProfileService.getRestaurant(userId);
         city = restaurant?.city;

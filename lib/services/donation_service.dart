@@ -10,6 +10,7 @@ class DonationService {
     String? city,
     String? category,
     String? status,
+    String? search,
     int limit = 50,
     int offset = 0,
   }) async {
@@ -17,6 +18,7 @@ class DonationService {
       'city': city,
       'category': category,
       'status': status,
+      'search': search,
       'limit': limit.toString(),
       'offset': offset.toString(),
     });

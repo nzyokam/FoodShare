@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:foodshare/models/user_model.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import '../providers/auth_notifier.dart';
 import '../widgets/app_snackbar.dart';
 
-class UserTypeSelection extends StatefulWidget {
+class UserTypeSelection extends ConsumerStatefulWidget {
   const UserTypeSelection({super.key});
 
   @override
-  State<UserTypeSelection> createState() => _UserTypeSelectionState();
+  ConsumerState<UserTypeSelection> createState() => _UserTypeSelectionState();
 }
 
-class _UserTypeSelectionState extends State<UserTypeSelection> {
+class _UserTypeSelectionState extends ConsumerState<UserTypeSelection> {
   UserType? _selectedType;
   bool _isLoading = false;
 
@@ -20,7 +20,7 @@ class _UserTypeSelectionState extends State<UserTypeSelection> {
     if (_selectedType == null) return;
     setState(() => _isLoading = true);
     try {
-      await context.read<AuthProvider>().setUserType(_selectedType!);
+      await ref.read(authNotifierProvider.notifier).setUserType(_selectedType!);
     } catch (e) {
       if (mounted) {
         AppSnackBar.showError(context, 'Error: ${e.toString()}');

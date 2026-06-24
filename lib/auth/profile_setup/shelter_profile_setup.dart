@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
+import '../../providers/auth_notifier.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/app_snackbar.dart';
 
-class ShelterProfileSetup extends StatefulWidget {
+class ShelterProfileSetup extends ConsumerStatefulWidget {
   const ShelterProfileSetup({super.key});
 
   @override
-  State<ShelterProfileSetup> createState() => _ShelterProfileSetupState();
+  ConsumerState<ShelterProfileSetup> createState() => _ShelterProfileSetupState();
 }
 
-class _ShelterProfileSetupState extends State<ShelterProfileSetup> {
+class _ShelterProfileSetupState extends ConsumerState<ShelterProfileSetup> {
   final _formKey = GlobalKey<FormState>();
 
   final _organizationNameController = TextEditingController();
@@ -72,7 +72,7 @@ class _ShelterProfileSetupState extends State<ShelterProfileSetup> {
       );
 
       if (mounted) {
-        await context.read<AuthProvider>().refreshUser();
+        await ref.read(authNotifierProvider.notifier).refreshUser();
         if (mounted) {
           AppSnackBar.showSuccess(context, 'Profile created successfully! Welcome to FoodShare!');
         }

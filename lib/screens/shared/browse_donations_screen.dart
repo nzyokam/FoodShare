@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import '../../models/donation_model.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/app_snackbar.dart';
-import '../../providers/auth_provider.dart';
+import '../../providers/auth_notifier.dart';
 import '../../services/donation_service.dart';
 import '../../services/profile_service.dart';
 import '../../services/request_service.dart';
@@ -17,14 +17,14 @@ const _kOnSurface = Color(0xFF1A1C1A);
 const _kMuted = Color(0xFF424841);
 const _kOutline = Color(0xFFC2C8BF);
 
-class BrowseDonationsScreen extends StatefulWidget {
+class BrowseDonationsScreen extends ConsumerStatefulWidget {
   const BrowseDonationsScreen({super.key});
 
   @override
-  State<BrowseDonationsScreen> createState() => _BrowseDonationsScreenState();
+  ConsumerState<BrowseDonationsScreen> createState() => _BrowseDonationsScreenState();
 }
 
-class _BrowseDonationsScreenState extends State<BrowseDonationsScreen> {
+class _BrowseDonationsScreenState extends ConsumerState<BrowseDonationsScreen> {
   List<Donation> _donations = [];
   bool _loading = true;
   String _selectedCity = '';
@@ -39,7 +39,7 @@ class _BrowseDonationsScreenState extends State<BrowseDonationsScreen> {
 
   Future<void> _loadShelterCity() async {
     try {
-      final userId = context.read<AuthProvider>().user?.id;
+      final userId = ref.read(authNotifierProvider).asData?.value.user?.id;
       if (userId != null) {
         final shelter = await ProfileService.getShelter(userId);
         if (shelter?.city != null) setState(() => _selectedCity = shelter!.city!);
@@ -55,15 +55,9 @@ class _BrowseDonationsScreenState extends State<BrowseDonationsScreen> {
         city: _selectedCity.isEmpty ? null : _selectedCity,
         category: _selectedCategory != null ? _categoryToApi(_selectedCategory!) : null,
         status: 'available',
+        search: _searchQuery.isEmpty ? null : _searchQuery,
       );
-      if (mounted) {
-        final filtered = _searchQuery.isEmpty
-            ? results
-            : results.where((d) =>
-                d.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                (d.description?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false)).toList();
-        setState(() { _donations = filtered; _loading = false; });
-      }
+      if (mounted) setState(() { _donations = results; _loading = false; });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
