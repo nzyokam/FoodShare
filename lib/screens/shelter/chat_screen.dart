@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../providers/auth_notifier.dart';
+import '../../services/api_client.dart';
 import '../../services/chat_service.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../models/chat_model.dart';
@@ -27,28 +29,58 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _scrollController = ScrollController();
 
   List<ChatMessage> _messages = [];
-  StreamSubscription<List<ChatMessage>>? _pollSub;
+  WebSocketChannel? _wsChannel;
   bool _sending = false;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _pollSub = ChatService.pollMessages(
-      widget.chatId,
-      onData: (messages) {
-        if (!mounted) return;
-        setState(() => _messages = messages);
-        _scrollToBottom();
-      },
-    );
+    _loadMessages();
   }
 
   @override
   void dispose() {
-    _pollSub?.cancel();
+    _wsChannel?.sink.close();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadMessages() async {
+    try {
+      final msgs = await ChatService.listMessages(widget.chatId);
+      if (!mounted) return;
+      setState(() {
+        _messages = msgs;
+        _loading = false;
+      });
+      _scrollToBottom();
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+    _connectWebSocket();
+  }
+
+  void _connectWebSocket() {
+    final token = ApiClient.getAccessToken();
+    token.then((t) {
+      if (!mounted || t == null) return;
+      _wsChannel?.sink.close();
+      _wsChannel = ChatService.connectToChat(
+        widget.chatId,
+        t,
+        _onIncomingMessage,
+      );
+    });
+  }
+
+  void _onIncomingMessage(ChatMessage message) {
+    if (!mounted) return;
+    // Deduplicate — the sender already added the message optimistically
+    if (_messages.any((m) => m.id == message.id)) return;
+    setState(() => _messages = [..._messages, message]);
+    _scrollToBottom();
   }
 
   void _scrollToBottom() {
@@ -129,25 +161,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           // Messages
           Expanded(
-            child: _messages.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.chat_bubble_outline, size: 64, color: Theme.of(context).colorScheme.primary.withAlpha(100)),
-                        const SizedBox(height: 16),
-                        Text('Start the conversation', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
-                        const SizedBox(height: 8),
-                        Text('Send a message to discuss this donation', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(160))),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) => _bubble(_messages[index], currentUserId),
-                  ),
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _messages.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.chat_bubble_outline, size: 64, color: Theme.of(context).colorScheme.primary.withAlpha(100)),
+                            const SizedBox(height: 16),
+                            Text('Start the conversation', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
+                            const SizedBox(height: 8),
+                            Text('Send a message to discuss this donation', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(160))),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) => _bubble(_messages[index], currentUserId),
+                      ),
           ),
           // Input
           Container(

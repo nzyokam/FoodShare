@@ -1,6 +1,7 @@
-import 'dart:async';
 import 'dart:convert';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import 'api_client.dart';
+import '../config/app_config.dart';
 import '../models/chat_model.dart';
 
 class ChatService {
@@ -43,30 +44,30 @@ class ChatService {
     await ApiClient.patch('/chats/$chatId/read');
   }
 
-  /// Returns a subscription that polls messages every [interval].
-  /// Cancel the subscription in dispose() to stop polling.
-  static StreamSubscription<List<ChatMessage>> pollMessages(
-    String chatId, {
-    required void Function(List<ChatMessage>) onData,
-    Duration interval = const Duration(seconds: 3),
-  }) {
-    final controller = StreamController<List<ChatMessage>>();
-    Timer? timer;
-
-    Future<void> fetch() async {
-      try {
-        final messages = await listMessages(chatId);
-        if (!controller.isClosed) controller.add(messages);
-      } catch (_) {}
-    }
-
-    fetch(); // immediate first fetch
-    timer = Timer.periodic(interval, (_) => fetch());
-
-    controller.onCancel = () {
-      timer?.cancel();
-      controller.close();
-    };
-    return controller.stream.listen(onData);
+  /// Opens a WebSocket connection to receive new messages in real-time.
+  /// [token] is the JWT access token.
+  /// [onMessage] is called for each incoming message from the other participant.
+  /// Returns the channel — call channel.sink.close() to disconnect.
+  static WebSocketChannel connectToChat(
+    String chatId,
+    String token,
+    void Function(ChatMessage) onMessage,
+  ) {
+    final wsBase = AppConfig.apiUrl
+        .replaceFirst('https://', 'wss://')
+        .replaceFirst('http://', 'ws://');
+    final uri = Uri.parse('$wsBase/chats/$chatId/ws?token=${Uri.encodeComponent(token)}');
+    final channel = WebSocketChannel.connect(uri);
+    channel.stream.listen(
+      (data) {
+        try {
+          final json = jsonDecode(data as String) as Map<String, dynamic>;
+          onMessage(ChatMessage.fromJson(json));
+        } catch (_) {}
+      },
+      onError: (_) {},
+      cancelOnError: false,
+    );
+    return channel;
   }
 }
