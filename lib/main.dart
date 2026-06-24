@@ -58,10 +58,8 @@ class _FoodShareState extends ConsumerState<FoodShare> {
         if (!_notifInitialized) {
           _notifInitialized = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) NotificationService.initialize(context);
+            if (mounted) NotificationService.initialize();
           });
-        } else {
-          NotificationService.updateContext(context);
         }
         if (kIsWeb) {
           final size = MediaQuery.of(context).size;

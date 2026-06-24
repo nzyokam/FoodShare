@@ -43,6 +43,9 @@ dependencies:
   # Real-time chat
   web_socket_channel: ^2.4.0
 
+  # Local notifications (foreground FCM banner on Android)
+  flutter_local_notifications: ^17.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

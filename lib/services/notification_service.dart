@@ -1,37 +1,47 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/material.dart';
-import '../widgets/app_snackbar.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'api_client.dart';
 
-/// Background message handler — must be a top-level function.
 @pragma('vm:entry-point')
-Future<void> _onBackgroundMessage(RemoteMessage message) async {
-  // No-op: FCM displays the system notification automatically for data+notification messages.
-}
+Future<void> _onBackgroundMessage(RemoteMessage message) async {}
+
+const _channelId = 'foodshare_default';
+const _channelName = 'FoodShare';
+const _channelDesc = 'Donation requests, messages, and updates';
+
+const _androidChannel = AndroidNotificationChannel(
+  _channelId,
+  _channelName,
+  description: _channelDesc,
+  importance: Importance.max,
+);
+
+final _localNotifications = kIsWeb ? null : FlutterLocalNotificationsPlugin();
 
 class NotificationService {
   static final _messaging = FirebaseMessaging.instance;
-  static BuildContext? _context;
 
-  /// Call once after Firebase.initializeApp() in main().
-  static Future<void> initialize(BuildContext context) async {
-    _context = context;
-
-    // Register background handler
+  static Future<void> initialize() async {
     FirebaseMessaging.onBackgroundMessage(_onBackgroundMessage);
 
-    // Request permission (iOS / web — Android grants by default)
     final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
-
     if (settings.authorizationStatus == AuthorizationStatus.denied) return;
 
-    // Web requires an explicit VAPID key — set yours from Firebase Console →
-    // Project Settings → Cloud Messaging → Web Push certificates → Key pair
+    if (!kIsWeb && _localNotifications != null) {
+      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      await _localNotifications!.initialize(
+        const InitializationSettings(android: androidSettings),
+      );
+      final androidPlugin = _localNotifications!
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      await androidPlugin?.createNotificationChannel(_androidChannel);
+    }
+
     String? token;
     if (kIsWeb) {
       token = await _messaging.getToken(
@@ -40,22 +50,30 @@ class NotificationService {
     } else {
       token = await _messaging.getToken();
     }
-
     if (token != null) await _saveToken(token);
 
-    // Refresh token whenever it rotates
     _messaging.onTokenRefresh.listen(_saveToken);
 
-    // Foreground message handler — show in-app snackbar
+    // Foreground messages: show a system banner via local notifications (Android only).
+    // On web, the FCM service worker handles background notifications; foreground is skipped.
     FirebaseMessaging.onMessage.listen((message) {
-      final ctx = _context;
-      if (ctx == null || !ctx.mounted) return;
+      if (kIsWeb) return;
       final notification = message.notification;
-      if (notification != null) {
-        final title = notification.title ?? '';
-        final body = notification.body ?? '';
-        AppSnackBar.showInfo(ctx, body.isNotEmpty ? body : title);
-      }
+      if (notification == null) return;
+      _localNotifications?.show(
+        DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        notification.title,
+        notification.body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channelId,
+            _channelName,
+            channelDescription: _channelDesc,
+            importance: Importance.max,
+            priority: Priority.high,
+          ),
+        ),
+      );
     });
   }
 
@@ -65,8 +83,6 @@ class NotificationService {
     } catch (_) {}
   }
 
-  /// Call this after login — the token save at startup fails because the user
-  /// isn't authenticated yet, so we re-save once they have a valid JWT.
   static Future<void> saveTokenAfterLogin() async {
     try {
       String? token;
@@ -80,6 +96,4 @@ class NotificationService {
       if (token != null) await _saveToken(token);
     } catch (_) {}
   }
-
-  static void updateContext(BuildContext context) => _context = context;
 }
