@@ -9,7 +9,6 @@ import '../../widgets/app_snackbar.dart';
 import '../shelter/chat_screen.dart';
 import 'add_donation_screen.dart';
 
-const _kGreen    = Color(0xFF38563B);
 const _kGreenMid = Color(0xFF506F52);
 
 class MyDonationsScreen extends StatefulWidget {

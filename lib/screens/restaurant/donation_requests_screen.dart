@@ -70,9 +70,11 @@ class _DonationRequestsScreenState extends State<DonationRequestsScreen> with Ti
         await RequestService.declineRequest(request.id);
       }
       await _loadRequests();
-      if (mounted) approve
-          ? AppSnackBar.showSuccess(context, 'Request approved!')
-          : AppSnackBar.showWarning(context, 'Request declined');
+      if (mounted) {
+        approve
+            ? AppSnackBar.showSuccess(context, 'Request approved!')
+            : AppSnackBar.showWarning(context, 'Request declined');
+      }
     } catch (e) {
       if (mounted) AppSnackBar.showError(context, 'Error: $e');
     }
