@@ -200,5 +200,5 @@ Nairobi, Mombasa, Nakuru, Eldoret, Kisumu
 ## Contact
 
 Developer: Muusi Nguutu Nzyoka  
-Email: khrismnjamez@gmail.com  
+Email: muusi@nzyoka.com  
 Project type: Individual social impact initiative
