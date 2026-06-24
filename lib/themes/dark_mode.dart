@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 ThemeData darkMode = ThemeData(
@@ -89,6 +90,11 @@ ThemeData darkMode = ThemeData(
     scrolledUnderElevation: 0,
     iconTheme: IconThemeData(color: Color(0xFFE1E3E0)),
     centerTitle: false,
+    systemOverlayStyle: SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+    ),
   ),
   dividerTheme: const DividerThemeData(color: Color(0xFF3A4A3A), thickness: 0.5, space: 0),
   chipTheme: ChipThemeData(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // Nourish & Nature — FoodShare design system
@@ -109,6 +110,11 @@ ThemeData lightMode = ThemeData(
     scrolledUnderElevation: 0,
     iconTheme: IconThemeData(color: kOnSurface),
     centerTitle: false,
+    systemOverlayStyle: SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+    ),
   ),
   dividerTheme: const DividerThemeData(
     color: kOutlineVariant,

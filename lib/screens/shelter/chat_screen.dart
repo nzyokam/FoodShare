@@ -5,6 +5,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../providers/auth_notifier.dart';
 import '../../services/api_client.dart';
 import '../../services/chat_service.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../models/chat_model.dart';
 
@@ -36,6 +37,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    NotificationService.cancelChatNotifications(widget.chatId);
     _loadMessages();
   }
 

@@ -60,21 +60,38 @@ class NotificationService {
       if (kIsWeb) return;
       final notification = message.notification;
       if (notification == null) return;
+      final chatId = message.data['chat_id'] as String?;
+      final notifId = chatId != null ? chatId.hashCode.abs() % 100000 : DateTime.now().millisecondsSinceEpoch ~/ 1000;
       _localNotifications?.show(
-        DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        notifId,
         notification.title,
         notification.body,
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
             _channelId,
             _channelName,
             channelDescription: _channelDesc,
             importance: Importance.max,
             priority: Priority.high,
+            tag: chatId,
           ),
         ),
       );
     });
+  }
+
+  /// Dismiss any pending notifications for this chat from the notification centre.
+  static Future<void> cancelChatNotifications(String chatId) async {
+    if (kIsWeb || _localNotifications == null) return;
+    final androidPlugin = _localNotifications!
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin == null) return;
+    final active = await androidPlugin.getActiveNotifications();
+    for (final n in active) {
+      if (n.tag == chatId) {
+        await _localNotifications!.cancel(n.id ?? 0, tag: n.tag);
+      }
+    }
   }
 
   static Future<void> _saveToken(String token) async {
