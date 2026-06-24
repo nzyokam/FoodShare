@@ -29,15 +29,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   Future<void> signInWithGoogle() async {
-    final previous = state.asData?.value ?? const AuthState();
     state = const AsyncLoading();
-    try {
+    state = await AsyncValue.guard(() async {
       final user = await AuthService.signInWithGoogle();
-      state = AsyncData(AuthState(user: user, hasDoneOnboarding: previous.hasDoneOnboarding));
-    } catch (e, st) {
-      state = AsyncData(previous);
-      Error.throwWithStackTrace(e, st);
-    }
+      final prefs = await SharedPreferences.getInstance();
+      final hasDoneOnboarding = prefs.getBool('has_done_onboarding') ?? false;
+      return AuthState(user: user, hasDoneOnboarding: hasDoneOnboarding);
+    });
   }
 
   Future<void> setUserType(UserType type) async {

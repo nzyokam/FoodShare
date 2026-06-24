@@ -15,13 +15,17 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
+  static bool _welcomeShown = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _showWelcomeSheet();
-    });
+    if (!_welcomeShown) {
+      _welcomeShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showWelcomeSheet();
+      });
+    }
   }
 
   void _showWelcomeSheet() {
