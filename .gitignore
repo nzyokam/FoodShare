@@ -51,6 +51,10 @@ app.*.map.json
 # Firebase Android config — contains API key, do not commit
 android/app/google-services.json
 
+# Release signing — never commit keystore or passwords
+android/key.properties
+android/app/*.jks
+
 # Misc dev files
 **/bug.txt
 
