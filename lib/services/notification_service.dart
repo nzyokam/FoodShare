@@ -6,6 +6,7 @@ import 'api_client.dart';
 @pragma('vm:entry-point')
 Future<void> _onBackgroundMessage(RemoteMessage message) async {}
 
+// Channel ID must match _ANDROID_CHANNEL_ID in the backend notifications.py
 const _channelId = 'foodshare_default';
 const _channelName = 'FoodShare';
 const _channelDesc = 'Donation requests, messages, and updates';
@@ -15,6 +16,9 @@ const _androidChannel = AndroidNotificationChannel(
   _channelName,
   description: _channelDesc,
   importance: Importance.max,
+  playSound: true,
+  enableVibration: true,
+  showBadge: true,
 );
 
 final _localNotifications = kIsWeb ? null : FlutterLocalNotificationsPlugin();
@@ -25,6 +29,7 @@ class NotificationService {
   static Future<void> initialize() async {
     FirebaseMessaging.onBackgroundMessage(_onBackgroundMessage);
 
+    // Request FCM permission (iOS + Android 13+)
     final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
@@ -37,9 +42,15 @@ class NotificationService {
       await _localNotifications!.initialize(
         const InitializationSettings(android: androidSettings),
       );
+
       final androidPlugin = _localNotifications!
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+      // Create the high-importance channel; must be done before any notification fires
       await androidPlugin?.createNotificationChannel(_androidChannel);
+
+      // Explicitly request POST_NOTIFICATIONS permission on Android 13+ (API 33+)
+      await androidPlugin?.requestNotificationsPermission();
     }
 
     String? token;
@@ -54,14 +65,17 @@ class NotificationService {
 
     _messaging.onTokenRefresh.listen(_saveToken);
 
-    // Foreground messages: show a system banner via local notifications (Android only).
-    // On web, the FCM service worker handles background notifications; foreground is skipped.
+    // Foreground: show a system banner for ALL notification types.
+    // Background / terminated: FCM delivers the notification automatically using
+    // the channel_id we set in the backend, which maps to _androidChannel above.
     FirebaseMessaging.onMessage.listen((message) {
       if (kIsWeb) return;
       final notification = message.notification;
       if (notification == null) return;
       final chatId = message.data['chat_id'] as String?;
-      final notifId = chatId != null ? chatId.hashCode.abs() % 100000 : DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final notifId = chatId != null
+          ? chatId.hashCode.abs() % 100000
+          : DateTime.now().millisecondsSinceEpoch ~/ 1000;
       _localNotifications?.show(
         notifId,
         notification.title,
@@ -74,24 +88,12 @@ class NotificationService {
             importance: Importance.max,
             priority: Priority.high,
             tag: chatId,
+            playSound: true,
+            enableVibration: true,
           ),
         ),
       );
     });
-  }
-
-  /// Dismiss any pending notifications for this chat from the notification centre.
-  static Future<void> cancelChatNotifications(String chatId) async {
-    if (kIsWeb || _localNotifications == null) return;
-    final androidPlugin = _localNotifications!
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    if (androidPlugin == null) return;
-    final active = await androidPlugin.getActiveNotifications();
-    for (final n in active) {
-      if (n.tag == chatId) {
-        await _localNotifications!.cancel(n.id ?? 0, tag: n.tag);
-      }
-    }
   }
 
   static Future<void> _saveToken(String token) async {
@@ -112,5 +114,19 @@ class NotificationService {
       }
       if (token != null) await _saveToken(token);
     } catch (_) {}
+  }
+
+  /// Dismiss any pending notifications for this chat from the notification centre.
+  static Future<void> cancelChatNotifications(String chatId) async {
+    if (kIsWeb || _localNotifications == null) return;
+    final androidPlugin = _localNotifications!
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin == null) return;
+    final active = await androidPlugin.getActiveNotifications();
+    for (final n in active) {
+      if (n.tag == chatId) {
+        await _localNotifications!.cancel(n.id ?? 0, tag: n.tag);
+      }
+    }
   }
 }
