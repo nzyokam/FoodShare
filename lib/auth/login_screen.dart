@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/auth_notifier.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/app_snackbar.dart';
+import '../widgets/legal_consent_text.dart';
 import '../widgets/welcome_sheet.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -175,15 +176,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
 
                   const SizedBox(height: 20),
-                  Text(
-                    'By continuing, you agree to our Terms of Service and Privacy Policy.',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
-                      color: const Color(0xFF737971),
-                      height: 1.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                  const LegalConsentText(),
                 ],
               ),
             ),

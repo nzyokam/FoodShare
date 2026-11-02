@@ -19,6 +19,9 @@ class AppConfig {
   static const _devApiUrl = 'http://192.168.1.4:8000';
   static const _prodApiUrl = 'https://api-foodshare.nzyoka.com';
 
+  static const privacyPolicyUrl = 'https://foodshare-home.nzyoka.com/privacypolicy';
+  static const termsOfServiceUrl = 'https://foodshare-home.nzyoka.com/termsofservice';
+
   static bool get isProduction => _env == 'production';
 
   static String get apiUrl =>
