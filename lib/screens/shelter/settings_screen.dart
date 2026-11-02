@@ -5,6 +5,7 @@ import '../../services/api_client.dart';
 import '../../providers/auth_notifier.dart';
 import '../../providers/theme_notifier.dart';
 import '../../widgets/app_logo.dart';
+import '../../utils/legal_links.dart';
 import '../../widgets/app_snackbar.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -147,9 +148,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _sectionHeader('Account', context),
           _card([
             _tile('Privacy Policy', 'Read our privacy policy', Icons.privacy_tip,
-                onTap: () => AppSnackBar.showInfo(context, 'Privacy Policy coming soon!')),
+                onTap: () => LegalLinks.openPrivacyPolicy(context)),
             _tile('Terms of Service', 'Read our terms of service', Icons.description,
-                onTap: () => AppSnackBar.showInfo(context, 'Terms of Service coming soon!')),
+                onTap: () => LegalLinks.openTerms(context)),
           ]),
           const SizedBox(height: 24),
           _sectionHeader('Support', context),
